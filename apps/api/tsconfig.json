@@ -4,5 +4,10 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src", "migrations", "knexfile.ts"]
+  "include": [
+    "src",
+    "migrations",
+    "scripts",
+    "knexfile.ts"
+  ]
 }

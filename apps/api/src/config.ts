@@ -11,6 +11,8 @@ const Env = z.object({
   S3_ACCESS_KEY: z.string(),
   S3_SECRET_KEY: z.string(),
   WEB_ORIGIN: z.string(),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.string(),
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   NOTES_MODEL: z.string().default("claude-sonnet-5-5"),

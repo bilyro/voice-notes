@@ -7,12 +7,14 @@
     "dev": "DOTENV_PATH=../../.env tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src migrations knexfile.ts",
-    "knex": "DOTENV_PATH=../../.env NODE_OPTIONS=\"--import tsx\" knex"
+    "lint": "eslint src migrations scripts knexfile.ts",
+    "knex": "DOTENV_PATH=../../.env NODE_OPTIONS=\"--import tsx\" knex",
+    "auth:migrate": "DOTENV_PATH=../../.env tsx scripts/auth-migrate.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@vn/shared": "workspace:*",
+    "better-auth": "^1.7.7",
     "dotenv": "^18.0.5",
     "fastify": "^5.12.5",
     "knex": "^3.3.0",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.23.15"
   }
 }

@@ -1,12 +1,17 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { config } from "./config.js";
+import { registerAuthRoutes } from "./auth.js";
+import { requireUser } from "./plugins/require-user.js";
 
 export async function buildServer() {
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true });
 
   app.get("/health", async () => ({ ok: true }));
+
+  registerAuthRoutes(app);
+  app.get("/me", { preHandler: requireUser }, async (req) => ({ userId: req.userId }));
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);

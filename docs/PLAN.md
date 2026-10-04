@@ -459,8 +459,8 @@ export async function down(knex: Knex) {
 > The embedding dimension (1536) depends on the embedding model you pick in Phase 2 — change it then with a new migration.
 
 ### Task 0.6 — Authentication
-- [ ] **Files:** `apps/api/src/auth.ts`, `apps/api/src/plugins/require-user.ts`
-- [ ] **Steps:** install Better Auth and follow its official Fastify integration guide (mount its handler under `/api/auth/*`, run its migration to create the `user`/`session` tables). Enable email + password only for now.
+- [x] **Files:** `apps/api/src/auth.ts`, `apps/api/src/plugins/require-user.ts`
+- [x] **Steps:** install Better Auth and follow its official Fastify integration guide (mount its handler under `/api/auth/*`, run its migration to create the `user`/`session` tables). Enable email + password only for now.
 
 ```ts
 // apps/api/src/plugins/require-user.ts
@@ -479,8 +479,8 @@ export async function requireUser(req: FastifyRequest, reply: FastifyReply) {
 }
 ```
 
-- [ ] **Verify:** sign up + sign in via curl or the web app; a test route with `preHandler: requireUser` returns 401 without a cookie and 200 with one.
-- [ ] **Commit:** `feat(api): email/password auth with Better Auth`
+- [x] **Verify:** sign up + sign in via curl or the web app; a test route with `preHandler: requireUser` returns 401 without a cookie and 200 with one.
+- [x] **Commit:** `feat(api): email/password auth with Better Auth`
 
 ### Task 0.7 — Web skeleton
 - [ ] **Files:** `apps/web/*` (Vite React TS template), `src/router.tsx`, `src/lib/api.ts`, login + sign-up pages
