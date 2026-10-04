@@ -329,8 +329,8 @@ export type Notes = z.infer<typeof Notes>;
 - [x] **Commit:** `feat(shared): add recording, transcript and notes schemas`
 
 ### Task 0.4 — API skeleton + config
-- [ ] **Files:** `apps/api/package.json`, `apps/api/src/config.ts`, `apps/api/src/server.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add fastify @fastify/cors zod dotenv @vn/shared` and `-D tsx @types/node`
+- [x] **Files:** `apps/api/package.json`, `apps/api/src/config.ts`, `apps/api/src/server.ts`
+- [x] **Steps:** `pnpm --filter @vn/api add fastify @fastify/cors zod dotenv @vn/shared` and `-D tsx @types/node`
 
 ```ts
 // apps/api/src/config.ts
@@ -383,8 +383,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 ```
 
-- [ ] **Verify:** `pnpm --filter @vn/api dev` then `curl localhost:3000/health` → `{"ok":true}`
-- [ ] **Commit:** `feat(api): fastify skeleton with typed config and health route`
+- [x] **Verify:** `pnpm --filter @vn/api dev` then `curl localhost:3000/health` → `{"ok":true}`
+- [x] **Commit:** `feat(api): fastify skeleton with typed config and health route`
 
 ### Task 0.5 — Database + migrations
 - [ ] **Files:** `apps/api/knexfile.ts`, `apps/api/src/db.ts`, `apps/api/migrations/001_init.ts`
