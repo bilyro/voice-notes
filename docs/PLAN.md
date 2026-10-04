@@ -523,8 +523,8 @@ jobs:
       - run: pnpm turbo lint typecheck test
 ```
 
-- [ ] **Verify:** push to GitHub → green check.
-- [ ] **Commit:** `ci: lint, typecheck, test on every push`
+- [x] **Verify:** push to GitHub → green check.
+- [x] **Commit:** `ci: lint, typecheck, test on every push`
 
 ### ✅ Phase 0 done when
 - [ ] `docker compose up -d && pnpm dev` starts API + web
