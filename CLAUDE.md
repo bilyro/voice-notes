@@ -12,6 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Explain what you did in 5–10 lines: the key decisions and anything I should learn.
 - Stack: TypeScript strict, pnpm, Zod, Vitest. No new dependencies without asking.
 - English only for now (see docs/PLAN.md section 1).
+- UI work follows docs/DESIGN.md and the reference screens in docs/design/screens/. Use only the tokens from DESIGN.md (no new colors, fonts or radii). The .dc.html files are mockups to read, not code to copy.
+- Never commit .env files or real recordings.
 
 # Project state
 
