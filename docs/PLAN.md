@@ -249,8 +249,8 @@ MONTHLY_MINUTES_LIMIT=600
 - [x] **Commit:** `chore: add docker compose for postgres, redis, minio`
 
 ### Task 0.3 — Shared package (schemas + types)
-- [ ] **Files:** `packages/shared/package.json`, `packages/shared/src/schemas/*.ts`, `packages/shared/src/index.ts`
-- [ ] **Steps:** `pnpm --filter @vn/shared add zod` (Zod v4)
+- [x] **Files:** `packages/shared/package.json`, `packages/shared/src/schemas/*.ts`, `packages/shared/src/index.ts`
+- [x] **Steps:** `pnpm --filter @vn/shared add zod` (Zod v4)
 
 ```ts
 // packages/shared/src/schemas/recording.ts
@@ -325,8 +325,8 @@ export const Notes = z.object({
 export type Notes = z.infer<typeof Notes>;
 ```
 
-- [ ] **Verify:** `pnpm --filter @vn/shared build` produces `dist/` with `.d.ts` files.
-- [ ] **Commit:** `feat(shared): add recording, transcript and notes schemas`
+- [x] **Verify:** `pnpm --filter @vn/shared build` produces `dist/` with `.d.ts` files.
+- [x] **Commit:** `feat(shared): add recording, transcript and notes schemas`
 
 ### Task 0.4 — API skeleton + config
 - [ ] **Files:** `apps/api/package.json`, `apps/api/src/config.ts`, `apps/api/src/server.ts`
