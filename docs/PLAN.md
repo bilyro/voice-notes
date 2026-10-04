@@ -617,7 +617,7 @@ Phase 0 was built before these decisions: free stack first, closed SaaS, the app
 
 - [ ] **Turbo:** in `turbo.json`, `dev` gets `"dependsOn": ["^build"]`, so `pnpm dev` on a fresh clone builds `@vn/shared` before the apps import it.
 - [ ] **Repo (closed SaaS):** the GitHub repo is **Private**. Add `LICENSE` with `Copyright (c) 2026 <your full name>. All rights reserved.` and the proprietary notice (no MIT). `.gitignore` ignores `.env` and `.env.*` but not `.env.example`. Run `git log --all --oneline -- .env`: it must print nothing. If a real key was ever committed, revoke it in the provider's console.
-- [ ] **`.env.example`:** add the AI provider block and make Haiku the paid-stage default:
+- [ ] **`.env.example`:** **replace** the existing `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=` and `NOTES_MODEL=` lines with this block, so no key appears twice. It also makes Haiku the paid-stage default. Make the same change in your local `.env`.
 
 ```bash
 # --- AI providers: FREE stack by default (Stage 1) ---
@@ -647,8 +647,20 @@ NOTES_MODEL=claude-haiku-4-5
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";   // Groq is OpenAI-compatible
 ```
 
+- [ ] **All API routes under `/api`** (decided for the free deploy, Task 1.16; done now so dev and production use the same paths and Phase 1 routes are written under it from the start):
+  - `server.ts`: register app routes inside `app.register(async (api) => { ... }, { prefix: "/api" })`, so `/health` → `/api/health` and `/me` → `/api/me`. Keep `registerAuthRoutes(app)` **outside** that plugin: its route is already `/api/auth/*`, and inside it would become `/api/api/auth/*`.
+  - `apps/web/src/lib/api.ts`: default `BASE` becomes `"http://localhost:3000/api"`; production builds set `VITE_API_URL=/api`.
+  - `apps/web/src/lib/auth-client.ts`: **don't** pass `VITE_API_URL` to Better Auth. It appends `/api/auth` itself and rejects relative URLs like `/api` ("Invalid base URL"). Use the API origin in dev, and leave `baseURL` out in production, which makes it use `window.location.origin`:
+
+```ts
+export const authClient = createAuthClient({
+  // dev: API on another port; production: same origin (Caddy routes /api/* to the API)
+  baseURL: import.meta.env.DEV ? "http://localhost:3000" : undefined,
+});
+```
+
 - [ ] **Design (Task 0.7 was built before the design existed):** read `docs/DESIGN.md`. Load Instrument Sans (400/500/600/700) in `apps/web/index.html`; create `src/styles/tokens.css` (DESIGN.md section 2) and `src/styles/base.css` (font, colors, `:focus-visible` outline); build `AppShell` + `Sidebar` like the reference screens (only Recordings and New recording visible for now); restyle sign-in / sign-up with the tokens (centered 400px column, h1, two inputs, black primary button).
-- [ ] **Verify:** with an `.env` that has **no AI keys**, `docker compose up -d && pnpm dev` starts API + web from a clean `packages/shared/dist`; the web app shows the sidebar shell and an empty Recordings page; at phone width the sidebar stacks on top; Tab shows a visible focus outline; `pnpm turbo lint typecheck test` is green.
+- [ ] **Verify:** with an `.env` that has **no AI keys**, `docker compose up -d && pnpm dev` starts API + web from a clean `packages/shared/dist`; `curl localhost:3000/api/health` → `{"ok":true}` and sign-up / sign-in still work; the web app shows the sidebar shell and an empty Recordings page; at phone width the sidebar stacks on top; Tab shows a visible focus outline; `pnpm turbo lint typecheck test` is green.
 - [ ] **Commit:** `chore: align phase 0 with current plan (turbo, license, config, design)`
 
 ### ✅ Phase 0 done when
@@ -740,12 +752,32 @@ export const keys = {
 };
 ```
 
-- [ ] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local RustFS).
+- [ ] **CI needs the services too.** This is the first test that talks to them, and CI has no Postgres, Redis or S3, so it would go red. Give Postgres a healthcheck in `docker-compose.yml`, so `--wait` waits until it accepts connections:
+
+```yaml
+  postgres:
+    # ...existing settings...
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d voice_notes"]
+      interval: 2s
+      retries: 30
+```
+
+  and add these steps to `.github/workflows/ci.yml`, before `pnpm turbo lint typecheck test`:
+
+```yaml
+      - run: cp .env.example .env                     # config.ts needs the variables; no AI keys required
+      - run: docker compose up -d --wait postgres redis s3
+      - run: docker compose run --rm createbucket     # finishes once the bucket exists
+      - run: pnpm --filter @vn/api knex migrate:latest && pnpm --filter @vn/api auth:migrate
+```
+
+- [ ] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local RustFS); CI is green with the new steps.
 - [ ] **Commit:** `feat(api): s3 storage service`
 
 ### Task 1.2 — Recordings repository + service + controller
 - [ ] **Files:** `apps/api/src/modules/recordings/*`
-- [ ] **Endpoints** (all use `preHandler: requireUser` and check `recording.user_id === req.userId`):
+- [ ] **Endpoints** (registered inside the `/api` prefix from Task 0.9, so `/recordings` is served at `/api/recordings`; all use `preHandler: requireUser` and check `recording.user_id === req.userId`):
 
 | Method | Path | Does |
 |---|---|---|
@@ -922,7 +954,7 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
 ### Task 1.5 — Speech-to-text interface + one adapter for free (Groq) and paid (OpenAI)
 - [ ] **Files:** `ai/stt/speech-to-text.ts`, `ai/stt/openai-compatible-stt.ts`, `ai/stt/fake-stt.ts`
 - [ ] Create a free Groq account at console.groq.com and an API key → `GROQ_API_KEY` in `.env`.
-- [ ] **Steps:** `pnpm --filter @vn/api add openai` (used for both Groq and OpenAI)
+- [ ] **Steps:** `pnpm --filter @vn/api add openai` (used for both Groq and OpenAI), and add the script `"tsx": "DOTENV_PATH=../../.env tsx"` to `apps/api/package.json`. Then `pnpm --filter @vn/api tsx scripts/<file>.ts` loads the root `.env`, just as the `knex` script does. Without it, `try-stt.ts` / `try-notes.ts` start without `GROQ_API_KEY` and fail.
 
 ```ts
 // apps/api/src/ai/stt/speech-to-text.ts
@@ -1047,7 +1079,16 @@ export async function transcribeJob(recordingId: string) {
 }
 ```
 
-- [ ] **Verify:** integration test with `FakeStt` → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry. Starting the worker without `GROQ_API_KEY` fails with a clear message; the API server still starts.
+- [ ] **Tests never import the real `ai/providers.ts`:** it throws without AI keys, and CI has none. Mock it in every job test (an async factory, because `vi.mock` is hoisted above the imports):
+
+```ts
+vi.mock("../ai/providers.js", async () => ({
+  stt: new (await import("../ai/stt/fake-stt.js")).FakeStt(),
+  notesGenerator: new (await import("../ai/notes/fake-notes.js")).FakeNotes(),
+}));
+```
+
+- [ ] **Verify:** integration test with `FakeStt` (mocked as above) → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry. Starting the worker without `GROQ_API_KEY` fails with a clear message; the API server still starts.
 - [ ] **Commit:** `feat(api): transcribe job`
 
 ### Task 1.7 — Notes prompts per mode
@@ -1079,7 +1120,7 @@ export const systemPrompt = (mode: RecordingMode) => `${base}\n\n${modeRules[mod
 - [ ] **Commit:** `feat(api): notes prompts per recording mode`
 
 ### Task 1.8 — NotesGenerator: shared chunking + free (Groq) and paid (Claude) adapters
-- [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`
+- [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`, `queue/queues.ts` (notes retry settings, see the rate-limit note below)
 - [ ] **Steps:** `pnpm --filter @vn/api add @anthropic-ai/sdk` (the `openai` package from Task 1.5 is reused for Groq)
 - [ ] Build `chunked-notes.ts` + `groq-notes.ts` **now**; `claude-notes.ts` can be written now but is only switched on in Phase 1b.
 
@@ -1107,6 +1148,7 @@ import type { Notes, RecordingMode, Segment } from "@vn/shared";
 import { formatTranscript, type NotesGenerator } from "./notes-generator.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const MERGE_PROMPT = "Merge these partial notes from consecutive parts of ONE recording. Remove duplicates.\n\n";
 
 export abstract class ChunkedNotesGenerator implements NotesGenerator {
   abstract readonly name: string;
@@ -1115,19 +1157,50 @@ export abstract class ChunkedNotesGenerator implements NotesGenerator {
   protected abstract callModel(mode: RecordingMode, content: string): Promise<Notes>;
 
   async generate(segments: Segment[], mode: RecordingMode): Promise<Notes> {
-    const text = formatTranscript(segments);
-    if (text.length <= this.maxCharsPerCall) return this.callModel(mode, text);
+    // one call at a time, with a pause between calls, so we never burst over rate limits
+    let calls = 0;
+    const call = async (content: string) => {
+      if (calls++ > 0) await sleep(this.pauseBetweenCallsMs);
+      return this.callModel(mode, content);
+    };
 
-    // MAP: notes for each part — sequential, so we never burst over rate limits
-    const partial: Notes[] = [];
-    for (const part of splitByChars(text, this.maxCharsPerCall)) {
-      partial.push(await this.callModel(mode, part));
-      await sleep(this.pauseBetweenCallsMs);
+    const text = formatTranscript(segments);
+    if (text.length <= this.maxCharsPerCall) return call(text);
+
+    // MAP: notes for each part
+    let notes: Notes[] = [];
+    for (const part of splitByChars(text, this.maxCharsPerCall)) notes.push(await call(part));
+
+    // REDUCE: merge in batches that fit one call, repeating until one result is left.
+    // (Merging everything at once could exceed the per-call / per-minute limit on long recordings.)
+    while (notes.length > 1) {
+      const merged: Notes[] = [];
+      for (const batch of batchForMerge(notes, this.maxCharsPerCall)) {
+        merged.push(batch.length === 1 ? batch[0]! : await call(MERGE_PROMPT + JSON.stringify(batch)));
+      }
+      notes = merged;
     }
-    // REDUCE: merge partial notes into one
-    return this.callModel(mode,
-      `Merge these partial notes from consecutive parts of ONE recording. Remove duplicates.\n\n${JSON.stringify(partial)}`);
+    return notes[0]!;
   }
+}
+
+/**
+ * Groups partial notes so each merge call stays within `max` chars. Every batch except the
+ * last has at least 2 items, so each round shrinks the list and the loop always ends
+ * (a pair of very large notes may go over `max`; progress matters more).
+ */
+export function batchForMerge(items: Notes[], max: number) {
+  const batches: Notes[][] = [];
+  let cur: Notes[] = [];
+  let size = 0;
+  for (const item of items) {
+    const len = JSON.stringify(item).length;
+    if (cur.length >= 2 && size + len > max) { batches.push(cur); cur = []; size = 0; }
+    cur.push(item);
+    size += len;
+  }
+  if (cur.length) batches.push(cur);
+  return batches;
 }
 
 export function splitByChars(text: string, max: number) {
@@ -1213,9 +1286,18 @@ export class ClaudeNotes extends ChunkedNotesGenerator {
 }
 ```
 
-> **Rate limits (free stage):** if Groq returns HTTP 429, the job fails and BullMQ retries it. For the `notes` queue use `attempts: 5` and `backoff: { type: "fixed", delay: 60_000 }` so retries wait a full minute. Check your real limits at console.groq.com (Settings → Limits) and tune `GROQ_NOTES_MAX_CHARS`.
+> **Rate limits (free stage):** if Groq returns HTTP 429, the job fails and BullMQ retries it. Change the `notes` queue in `queue/queues.ts` (Task 1.3) so retries wait a full minute:
+>
+> ```ts
+> notes: new Queue<{ recordingId: string }>("notes", {
+>   connection,
+>   defaultJobOptions: { ...defaults, attempts: 5, backoff: { type: "fixed", delay: 60_000 } },
+> }),
+> ```
+>
+> A retry runs the whole job again, including map calls that already succeeded. That's fine at $0, but it uses up daily quota. Check your real limits at console.groq.com (Settings → Limits) and tune `GROQ_NOTES_MAX_CHARS`.
 
-- [ ] **Verify:** unit test `splitByChars` (never cuts a line, no empty parts). Manual script `try-notes.ts` with `NOTES_PROVIDER=groq` on a real English transcript (short and > 20 minutes) → valid `Notes` JSON ($0).
+- [ ] **Verify:** unit tests: `splitByChars` (never cuts a line, no empty parts); `batchForMerge` (batches stay under `max` when possible, every batch but the last has ≥ 2 items); `generate` with a fake `callModel` on a long transcript ends with exactly one result. Manual script `try-notes.ts` with `NOTES_PROVIDER=groq` on a real English transcript (short and > 20 minutes) → valid `Notes` JSON ($0).
 - [ ] **Commit:** `feat(api): notes generators with shared chunking (groq free, claude paid)`
 
 > Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you switch to Claude; the model is configurable via `NOTES_MODEL`.
@@ -1250,7 +1332,7 @@ export async function notesJob(recordingId: string) {
 }
 ```
 
-- [ ] **Verify:** full pipeline test with `FakeStt` + `FakeNotes`: create → chunks → finish → run both jobs → status `ready`, notes row exists, action items saved.
+- [ ] **Verify:** full pipeline test with `FakeStt` + `FakeNotes` (providers mocked as in Task 1.6): create → chunks → finish → run both jobs → status `ready`, notes row exists, action items saved.
 - [ ] **Commit:** `feat(api): notes job saves notes and action items`
 
 ### Task 1.10 — Browser recorder hook + chunk uploader
@@ -1352,9 +1434,10 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 > Duration from `Date.now()` includes paused time — subtract pauses if you add a visible timer. Stretch goal: keep un-uploaded chunks in IndexedDB so a closed tab doesn't lose audio.
 
 ### Task 1.11 — Record page
-- [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`, `components/SegmentedControl.tsx`, `components/RecordButton.tsx`, `components/InfoNote.tsx`
+- [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`, `components/SegmentedControl.tsx`, `components/RecordButton.tsx`, `components/InfoNote.tsx`, `apps/api/src/server.ts`
 - [ ] **Design:** before recording = `docs/design/screens/NewRecording.dc.html`; while recording = `docs/design/screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop).
-- [ ] **Steps:** segmented control Meeting / Lesson / Voice memo with the one-line hint of what the notes focus on, optional title, microphone select with input-level bar, no language selector (English only), Free plan info note (Task 1b.5 text), big red record button + consent reminder ("Tell everyone they are being recorded"). While recording: "Recording" badge, big timer, waveform, "Saved up to mm:ss", Pause and Stop and save buttons.
+- [ ] **Steps:** segmented control Meeting / Lesson / Voice memo with the one-line hint of what the notes focus on, optional title, microphone select with input-level bar, no language selector (English only), Free plan info note (Task 1b.5 text, shown only when `freeMode` is true, see below), big red record button + consent reminder ("Tell everyone they are being recorded"). While recording: "Recording" badge, big timer, waveform, "Saved up to mm:ss", Pause and Stop and save buttons.
+- [ ] **Free mode flag:** the web app can't read the server's `.env`, so the API exposes it: `GET /api/app-config` (with `requireUser`) → `{ freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq" }`. The Record page loads it with `useQuery`.
 - [ ] Flow on **Record**: `POST /recordings` → create `ChunkUploader(id)` → `start()`.
 - [ ] Flow on **Stop**: `stop()` → `uploader.flush()` → `POST /recordings/:id/finish { chunkCount, durationMs }` → navigate to the detail page.
 - [ ] **Verify:** record → stop → redirected to detail page showing status `uploaded` → `transcribing`.
@@ -1450,7 +1533,7 @@ sudo netfilter-persistent save
 - [ ] All Docker images used here (Postgres/pgvector, Redis, Caddy, Node) must support **arm64** — check each image's tags if a container fails to start.
 
 **4. Same-origin API under `/api`**
-- [ ] Register all API routes with a prefix so web + API share one domain (no CORS, simple cookies): `app.register(routes, { prefix: "/api" })`. Better Auth is already under `/api/auth`. Build the web app with `VITE_API_URL=/api`.
+- [ ] Already done in Task 0.9: all routes are under `/api`, and the auth client uses the page's own origin in production. Web and API share one domain (no CORS, simple cookies). Build the web app with `VITE_API_URL=/api`.
 
 **5. Audio storage on Cloudflare R2**
 - [ ] In the Cloudflare dashboard enable **R2** (it may ask for a payment method as verification; you stay free up to 10 GB). Create a bucket `voice-notes-audio` and an **R2 API token** with *Object Read & Write* for that bucket only. Note your Account ID.
@@ -1460,7 +1543,7 @@ sudo netfilter-persistent save
 
 **6. Production files**
 
-- [ ] `apps/api` needs a `build` script (`tsc -p .` → `dist/`) and the image keeps dev dependencies (the `knex` and `auth:migrate` scripts use tsx). The `.env` file is not copied into the image: Compose passes the variables, so the missing `DOTENV_PATH` file is harmless.
+- [ ] `apps/api` already has a `build` script (`tsc -p tsconfig.json`). Because `rootDir` is `.` (Task 0.5), the output is `dist/src/server.js` and `dist/src/worker.js`, **not** `dist/server.js`. The image keeps dev dependencies (the `knex` and `auth:migrate` scripts use tsx). The `.env` file is not copied into the image: Compose passes the variables, so the missing `DOTENV_PATH` file is harmless.
 
 ```dockerfile
 # apps/api/Dockerfile — one image for both API and worker
@@ -1471,7 +1554,7 @@ RUN corepack enable
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile && pnpm turbo build --filter=@vn/api...
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["node", "apps/api/dist/src/server.js"]   # rootDir "." → dist/src/
 ```
 
 ```yaml
@@ -1500,7 +1583,7 @@ services:
 
   worker:
     build: { context: ., dockerfile: apps/api/Dockerfile }
-    command: ["node", "apps/api/dist/worker.js"]
+    command: ["node", "apps/api/dist/src/worker.js"]
     env_file: .env
     depends_on: [postgres, redis]
     restart: unless-stopped
@@ -1591,7 +1674,7 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [ ] Show "This month: X minutes, $Y" on the recordings page.
 
 ### Task 1b.5 — Privacy switch
-- [ ] When `STT_PROVIDER=groq` or `NOTES_PROVIDER=groq`, show a small "Free mode — test recordings only" badge on the Record page. It disappears automatically in the paid stack.
+- [ ] When `freeMode` from `GET /api/app-config` (Task 1.11) is true, i.e. `STT_PROVIDER=groq` or `NOTES_PROVIDER=groq`, show a small "Free mode — test recordings only" badge on the Record page. It disappears automatically in the paid stack.
 
 ### ✅ Phase 1b done when
 - [ ] The Phase 1 acceptance test passes again with `STT_PROVIDER=openai` and `NOTES_PROVIDER=claude`.
