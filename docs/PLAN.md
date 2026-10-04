@@ -13,7 +13,7 @@ An app that **listens**, **saves what was said**, and turns it into **notes and 
 | Platforms | Web, Desktop (Electron), Mobile (Expo / React Native) |
 | Use cases | Meetings/calls, lessons/lectures, personal voice memos (all three) |
 | Processing | Cloud APIs first, local (offline) processing added later |
-| Languages | Ukrainian + English, auto-detect; notes language is a user setting |
+| Languages | **English only for now**: speech-to-text is forced to `en` and notes are written in English. Ukrainian, auto-detect and a notes-language setting come later (Phase 2) |
 | Build order | Backend + Web first → Desktop → Mobile → Live mode → Local processing |
 
 **Main rule:** clients only *record* and *display*. All intelligence runs in background workers behind two interfaces (`SpeechToText`, `NotesGenerator`). Switching cloud → local later = writing a new adapter, not rewriting the app.
@@ -51,22 +51,22 @@ recording → uploaded → transcribing → summarizing → ready
 | Layer | Choice | Why |
 |---|---|---|
 | Monorepo | pnpm workspaces + Turborepo | One repo, shared types across 4 apps |
-| API | Node 22 + TypeScript + Fastify | Fast, good TS support, easy raw-body handling for audio |
+| API | Node 22+ + TypeScript 6.0 + Fastify 5 | Fast, good TS support, easy raw-body handling for audio. TS is pinned to `~6.0` because typescript-eslint doesn't support TS 7 yet |
 | Architecture | Controller → Service → Repository | Clean layers, easy to test |
 | DB access | Knex (migrations + query builder) | Explicit SQL, simple repositories |
 | Validation | Zod (shared between API and clients) | One schema = types + runtime checks |
 | DB | PostgreSQL 16 + pgvector | Data + semantic search in one place |
 | Jobs | Redis + BullMQ | Retries, backoff, progress, separate worker process |
-| Audio storage | S3-compatible (MinIO local, Cloudflare R2 prod) | Cheap, swappable |
+| Audio storage | S3-compatible (RustFS local, Cloudflare R2 prod) | Cheap, swappable. MinIO no longer publishes Docker images, so we use RustFS, which is MinIO-compatible |
 | Audio tools | ffmpeg (in worker) | Join chunks, normalize to mono 16 kHz |
 | Auth | Better Auth (email + password to start) | Self-hosted, TS-first |
 | Web | React + Vite + React Router + TanStack Query | Simple, fast dev loop |
-| Speech-to-text (cloud) | Adapter; first example: OpenAI `whisper-1` | Supports Ukrainian; swap later for a provider with diarization |
+| Speech-to-text (cloud) | Adapter; first example: OpenAI `whisper-1` | Returns segment timestamps (`verbose_json`); swap later for a provider with diarization |
 | Notes (cloud) | Adapter; Claude via `@anthropic-ai/sdk` | Strong structured output via forced tool use |
 | Tests | Vitest | Fast, TS-native |
 | Later | Electron, Expo, whisper.cpp, Ollama | Phases 3–6 |
 
-> Before locking the STT provider: record 3–4 real samples (Ukrainian lesson, English call, mixed memo) and compare 2–3 providers on accuracy, speaker labels, price per minute. Keep the winner behind the adapter.
+> Before locking the STT provider: record 3–4 real English samples (a call, a lecture, a memo) and compare 2–3 providers on accuracy, speaker labels and price per minute. Keep the winner behind the adapter. Repeat with Ukrainian samples when Ukrainian is added.
 
 ---
 
@@ -88,11 +88,13 @@ voice-notes/
 │        ├─ schemas/recording.ts
 │        ├─ schemas/transcript.ts
 │        ├─ schemas/notes.ts
-│        └─ api-client.ts
+│        ├─ notes-to-markdown.ts       # Task 1.14
+│        └─ api-client.ts              # later (Phase 4), when mobile needs it
 └─ apps/
    ├─ api/
    │  ├─ knexfile.ts
    │  ├─ migrations/
+   │  ├─ scripts/                     # auth-migrate.ts, try-stt.ts, try-notes.ts
    │  └─ src/
    │     ├─ server.ts            # HTTP entry
    │     ├─ worker.ts            # BullMQ worker entry (separate process)
@@ -108,7 +110,9 @@ voice-notes/
    │     ├─ queue/queues.ts
    │     ├─ jobs/transcribe.job.ts
    │     ├─ jobs/notes.job.ts
+   │     ├─ jobs/mark-failed.ts
    │     ├─ audio/prepare-audio.ts
+   │     ├─ ai/providers.ts                  # the ONLY place that picks adapters
    │     ├─ ai/stt/speech-to-text.ts         # interface
    │     ├─ ai/stt/openai-stt.ts             # cloud adapter
    │     ├─ ai/stt/fake-stt.ts               # for tests
@@ -121,12 +125,14 @@ voice-notes/
          ├─ main.tsx
          ├─ router.tsx
          ├─ lib/api.ts
+         ├─ lib/auth-client.ts
          ├─ recorder/use-recorder.ts
          ├─ recorder/chunk-uploader.ts
+         ├─ pages/{LoginPage,SignUpPage}.tsx
          ├─ pages/RecordPage.tsx
          ├─ pages/RecordingsPage.tsx
          ├─ pages/RecordingDetailPage.tsx
-         └─ components/{AudioPlayer,Transcript,NotesEditor}.tsx
+         └─ components/{RequireAuth,AudioPlayer,Transcript,NotesEditor}.tsx
 ```
 
 ---
@@ -142,9 +148,11 @@ voice-notes/
 ```bash
 mkdir voice-notes && cd voice-notes && git init
 pnpm init
-pnpm add -Dw turbo typescript prettier eslint typescript-eslint vitest
+pnpm add -Dw turbo typescript@~6.0 prettier eslint typescript-eslint vitest
 mkdir -p apps packages
 ```
+
+> `pnpm init` adds `"packageManager": "pnpm@<version>"`, which Turborepo requires and CI reads. Run `corepack enable pnpm` once so the `pnpm` binary is on PATH; turbo calls it directly.
 
 ```yaml
 # pnpm-workspace.yaml
@@ -198,38 +206,44 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: voice_notes
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]   # 5433 on the host: avoids clashing with a locally installed Postgres
     volumes: [pgdata:/var/lib/postgresql/data]
 
   redis:
     image: redis:7
     ports: ["6379:6379"]
 
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
+  # S3-compatible storage. MinIO stopped publishing Docker images, so we use RustFS
+  # (MinIO-compatible). Credentials match S3_ACCESS_KEY / S3_SECRET_KEY in .env.example.
+  s3:
+    image: rustfs/rustfs:latest
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio12345
+      RUSTFS_ACCESS_KEY: minio
+      RUSTFS_SECRET_KEY: minio12345
+      RUSTFS_CONSOLE_ENABLE: "true"
     ports: ["9000:9000", "9001:9001"]
-    volumes: [miniodata:/data]
+    volumes: [s3data:/data]
 
   createbucket:
-    image: minio/mc
-    depends_on: [minio]
+    image: amazon/aws-cli
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio12345
+      AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
-      /bin/sh -c "sleep 3 &&
-      mc alias set local http://minio:9000 minio minio12345 &&
-      mc mb -p local/recordings"
+      /bin/sh -c "until aws --endpoint-url http://s3:9000 s3 ls >/dev/null 2>&1; do sleep 1; done &&
+      (aws --endpoint-url http://s3:9000 s3api head-bucket --bucket recordings 2>/dev/null ||
+      aws --endpoint-url http://s3:9000 s3 mb s3://recordings)"
 
 volumes:
   pgdata:
-  miniodata:
+  s3data:
 ```
 
 ```bash
 # .env.example
-DATABASE_URL=postgres://app:app@localhost:5432/voice_notes
+DATABASE_URL=postgres://app:app@localhost:5433/voice_notes
 REDIS_URL=redis://localhost:6379
 S3_ENDPOINT=http://localhost:9000
 S3_REGION=us-east-1
@@ -245,8 +259,10 @@ NOTES_MODEL=claude-sonnet-5-5
 MONTHLY_MINUTES_LIMIT=600
 ```
 
-- [x] **Verify:** `docker compose up -d` → MinIO console at `http://localhost:9001` shows bucket `recordings`; `psql $DATABASE_URL -c "select 1"` works.
+- [x] **Verify:** `docker compose up -d` → RustFS console at `http://localhost:9001/rustfs/console/` (login `minio` / `minio12345`) shows bucket `recordings`; `docker compose exec postgres psql -U app voice_notes -c "select 1"` works.
 - [x] **Commit:** `chore: add docker compose for postgres, redis, minio`
+
+> Postgres is exposed on host port **5433**, so it doesn't clash with a locally installed Postgres on 5432. Inside Docker it still listens on 5432.
 
 ### Task 0.3 — Shared package (schemas + types)
 - [x] **Files:** `packages/shared/package.json`, `packages/shared/src/schemas/*.ts`, `packages/shared/src/index.ts`
@@ -330,7 +346,9 @@ export type Notes = z.infer<typeof Notes>;
 
 ### Task 0.4 — API skeleton + config
 - [x] **Files:** `apps/api/package.json`, `apps/api/src/config.ts`, `apps/api/src/server.ts`
-- [x] **Steps:** `pnpm --filter @vn/api add fastify @fastify/cors zod dotenv @vn/shared` and `-D tsx @types/node`
+- [x] **Steps:** `pnpm --filter @vn/api add fastify @fastify/cors zod dotenv "@vn/shared@workspace:*"` and `-D tsx @types/node`
+  (`workspace:*` is required: pnpm doesn't link workspace packages automatically and would look for `@vn/shared` on npm)
+- [x] **Scripts:** `"dev": "DOTENV_PATH=../../.env tsx watch src/server.ts"`. `.env` lives at the repo root, but `dotenv/config` reads from the process's working directory (`apps/api`). dotenv 18 renamed `DOTENV_CONFIG_PATH` to `DOTENV_PATH`.
 
 ```ts
 // apps/api/src/config.ts
@@ -370,8 +388,13 @@ export async function buildServer() {
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
-    const status = err.statusCode ?? 500;
-    reply.status(status).send({ error: status === 500 ? "Internal error" : err.message });
+    // Fastify 5.12 types `err` as unknown: anything can be thrown, so narrow before reading fields
+    const status =
+      err instanceof Error && "statusCode" in err && typeof err.statusCode === "number"
+        ? err.statusCode
+        : 500;
+    const message = err instanceof Error ? err.message : "Internal error";
+    reply.status(status).send({ error: status === 500 ? "Internal error" : message });
   });
 
   return app;
@@ -389,6 +412,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 ### Task 0.5 — Database + migrations
 - [x] **Files:** `apps/api/knexfile.ts`, `apps/api/src/db.ts`, `apps/api/migrations/001_init.ts`
 - [x] **Steps:** `pnpm --filter @vn/api add knex pg`
+- [x] **Notes (as built):** `src/db.ts` exports `knexConfig` + `db`, and `knexfile.ts` just re-exports the config. The `knex` script runs the CLI under tsx (`DOTENV_PATH=../../.env NODE_OPTIONS="--import tsx" knex`), because Node's built-in TS support doesn't map `./x.js` imports to `x.ts`. `tsconfig` includes `migrations/`, `scripts/` and `knexfile.ts`.
 
 ```ts
 // apps/api/migrations/001_init.ts
@@ -460,7 +484,9 @@ export async function down(knex: Knex) {
 
 ### Task 0.6 — Authentication
 - [x] **Files:** `apps/api/src/auth.ts`, `apps/api/src/plugins/require-user.ts`
-- [x] **Steps:** install Better Auth and follow its official Fastify integration guide (mount its handler under `/api/auth/*`, run its migration to create the `user`/`session` tables). Enable email + password only for now.
+- [x] **Steps:** install Better Auth and follow its official Fastify integration guide (mount its handler under `/api/auth/*`, run its migration). Enable email + password only for now.
+- [x] **As built:** `pnpm --filter @vn/api add better-auth` + `-D @types/pg`. Tables are created with `pnpm --filter @vn/api auth:migrate` (`scripts/auth-migrate.ts`, which uses `getMigrations` from `better-auth/db/migration`): `user`, `session`, `account` (holds password hashes) and `verification`. `config.ts` validates `BETTER_AUTH_SECRET` (min 32 chars) and `BETTER_AUTH_URL`. `trustedOrigins: [WEB_ORIGIN]`. The protected test route is `GET /me` → `{ userId }`.
+- **A fresh database needs both migrations:** `knex migrate:latest` (app tables) and `auth:migrate` (auth tables).
 
 ```ts
 // apps/api/src/plugins/require-user.ts
@@ -488,7 +514,7 @@ export async function requireUser(req: FastifyRequest, reply: FastifyReply) {
 
 ```bash
 pnpm create vite apps/web --template react-ts
-pnpm --filter web add react-router @tanstack/react-query better-auth @vn/shared
+pnpm --filter web add react-router @tanstack/react-query better-auth "@vn/shared@workspace:*"
 ```
 
 ```ts
@@ -501,6 +527,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.status === 204 ? (undefined as T) : res.json();
 }
 ```
+
+> **As built:** React Router **v8**: import `RouterProvider` from `react-router/dom` and everything else from `react-router` (`react-router-dom` no longer exists). create-vite now ships **oxlint** (kept: it checks React's rules of hooks). Auth uses `createAuthClient` from `better-auth/react` (`lib/auth-client.ts`). A `RequireAuth` layout route guards pages. After sign-in/sign-up, `await useSession().refetch()` **before** `navigate()`, otherwise the guard sees the stale signed-out session and bounces back to `/login`.
 
 - [x] **Verify:** open `http://localhost:5173`, sign up, land on an empty "Recordings" page; page shows the result of `/health`.
 - [x] **Commit:** `feat(web): vite react skeleton with auth pages`
@@ -515,13 +543,15 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6          # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo lint typecheck test
 ```
+
+> The v4 actions run on Node 20, which GitHub has deprecated, so we use the current majors. pnpm 12 **fails** a CI install when a dependency's build script was skipped without an explicit decision, so `pnpm-workspace.yaml` lists `allowBuilds: { esbuild: false }`. Add an entry there for each new package with a build script.
 
 - [x] **Verify:** push to GitHub → green check.
 - [x] **Commit:** `ci: lint, typecheck, test on every push`
@@ -537,6 +567,35 @@ jobs:
 
 **Goal:** record in the browser → audio uploads in chunks → transcript → notes & proposals appear automatically → you can edit and export them.
 
+### Task 1.0 — English-only language field
+- [ ] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/api/migrations/002_english_only.ts`
+- [ ] **Why:** we support English only for now (Section 1), but Task 0.3/0.5 built `uk | en | auto` with default `auto`. We keep the `language` field, so adding Ukrainian later is an enum change plus UI, but restrict it to `en`.
+
+```ts
+// packages/shared/src/schemas/recording.ts (changes)
+export const LanguageCode = z.enum(["en"]);           // add "uk" / "auto" in Phase 2
+export type LanguageCode = z.infer<typeof LanguageCode>;
+// in CreateRecordingInput:
+  language: LanguageCode.default("en"),
+```
+
+```ts
+// apps/api/migrations/002_english_only.ts
+import type { Knex } from "knex";
+
+export async function up(knex: Knex) {
+  await knex("recordings").whereNot("language", "en").update({ language: "en" });
+  await knex.raw("alter table recordings alter column language set default 'en'");
+}
+
+export async function down(knex: Knex) {
+  await knex.raw("alter table recordings alter column language set default 'auto'");
+}
+```
+
+- [ ] **Verify:** `pnpm turbo typecheck` is green; `knex migrate:latest` then `\d recordings` shows `language ... default 'en'`; `migrate:rollback` + `migrate:latest` works.
+- [ ] **Commit:** `feat: restrict recording language to English for now`
+
 ### Task 1.1 — Storage service
 - [ ] **Files:** `apps/api/src/storage/storage.service.ts`
 - [ ] **Steps:** `pnpm --filter @vn/api add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
@@ -551,7 +610,7 @@ import { config } from "../config.js";
 const s3 = new S3Client({
   endpoint: config.S3_ENDPOINT,
   region: config.S3_REGION,
-  forcePathStyle: true,                        // needed for MinIO
+  forcePathStyle: true,                        // needed for RustFS/MinIO
   credentials: { accessKeyId: config.S3_ACCESS_KEY, secretAccessKey: config.S3_SECRET_KEY },
 });
 
@@ -568,9 +627,14 @@ export const storage = {
     getSignedUrl(s3, new GetObjectCommand({ Bucket: config.S3_BUCKET, Key: key }), { expiresIn: seconds }),
 
   async deletePrefix(prefix: string) {
-    const list = await s3.send(new ListObjectsV2Command({ Bucket: config.S3_BUCKET, Prefix: prefix }));
-    const objects = (list.Contents ?? []).map((o) => ({ Key: o.Key! }));
-    if (objects.length) await s3.send(new DeleteObjectsCommand({ Bucket: config.S3_BUCKET, Delete: { Objects: objects } }));
+    // one list call returns at most 1000 keys (~2.7 h of 10 s chunks), so page through
+    let token: string | undefined;
+    do {
+      const list = await s3.send(new ListObjectsV2Command({ Bucket: config.S3_BUCKET, Prefix: prefix, ContinuationToken: token }));
+      const objects = (list.Contents ?? []).map((o) => ({ Key: o.Key! }));
+      if (objects.length) await s3.send(new DeleteObjectsCommand({ Bucket: config.S3_BUCKET, Delete: { Objects: objects } }));
+      token = list.NextContinuationToken;
+    } while (token);
   },
 };
 
@@ -581,7 +645,7 @@ export const keys = {
 };
 ```
 
-- [ ] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local MinIO).
+- [ ] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local RustFS).
 - [ ] **Commit:** `feat(api): s3 storage service`
 
 ### Task 1.2 — Recordings repository + service + controller
@@ -591,7 +655,7 @@ export const keys = {
 | Method | Path | Does |
 |---|---|---|
 | `POST` | `/recordings` | Create recording (status `recording`), returns `{ id }` |
-| `PUT` | `/recordings/:id/chunks/:index` | Store one raw audio chunk (body = bytes) |
+| `PUT` | `/recordings/:id/chunks/:index` | Store one raw audio chunk (body = bytes). Only while status is `recording`, else 409 |
 | `POST` | `/recordings/:id/finish` | Body `{ chunkCount, durationMs }` → status `uploaded`, enqueue `transcribe` job |
 | `GET` | `/recordings` | List (newest first) |
 | `GET` | `/recordings/:id` | Recording + segments + latest notes |
@@ -649,7 +713,7 @@ export class RecordingsService {
     if (rec.status !== "recording") throw httpError(409, "Already finished");
     await this.checkMonthlyLimit(userId, body.durationMs);          // cost guard
     await this.repo.update(id, { status: "uploaded", chunk_count: body.chunkCount, duration_ms: body.durationMs });
-    await this.queues.transcribe.add("transcribe", { recordingId: id }, { jobId: `transcribe:${id}` });
+    await this.queues.transcribe.add("transcribe", { recordingId: id }, { jobId: `transcribe-${id}` });
   }
 }
 ```
@@ -658,8 +722,10 @@ export class RecordingsService {
 - [ ] **Commit:** `feat(api): recordings endpoints with chunked upload`
 
 ### Task 1.3 — Queues and worker process
-- [ ] **Files:** `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add bullmq ioredis`
+- [ ] **Files:** `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/src/jobs/mark-failed.ts`
+- [ ] **Steps:** `pnpm --filter @vn/api add bullmq ioredis`, and add the script `"worker": "DOTENV_PATH=../../.env tsx watch src/worker.ts"`
+
+> **Job ids:** BullMQ throws `Custom Id cannot contain :`, so use `transcribe-<id>` / `notes-<id>`. Also, `add()` with an id that **already exists** (including a kept failed job) is silently ignored. See retry in Task 1.15.
 
 ```ts
 // apps/api/src/queue/queues.ts
@@ -698,6 +764,14 @@ for (const w of [
   });
 }
 console.log("Worker started");
+```
+
+```ts
+// apps/api/src/jobs/mark-failed.ts
+import { repo } from "../modules/recordings/recordings.repository.js";
+
+export const markFailed = (recordingId: string, error: string) =>
+  repo.update(recordingId, { status: "failed", error });
 ```
 
 - [ ] **Verify:** `pnpm --filter @vn/api worker` starts; finishing a recording shows a job in Redis (`redis-cli keys 'bull:*'`).
@@ -756,10 +830,10 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
 
 ```ts
 // apps/api/src/ai/stt/speech-to-text.ts
-import type { Segment } from "@vn/shared";
+import type { LanguageCode, Segment } from "@vn/shared";
 
 export interface TranscribeOptions {
-  language: "uk" | "en" | "auto";
+  language: LanguageCode;            // "en" only for now (Task 1.0)
   diarize: boolean;
 }
 
@@ -785,7 +859,7 @@ export class OpenAiStt implements SpeechToText {
       model: "whisper-1",
       response_format: "verbose_json",
       timestamp_granularities: ["segment"],
-      ...(opts.language !== "auto" && { language: opts.language }),
+      language: opts.language,                 // forcing the language beats auto-detect on accuracy
     });
     const segments = (res.segments ?? []).map((s) => ({
       startMs: Math.round(s.start * 1000),
@@ -804,14 +878,14 @@ export class FakeStt implements SpeechToText {
   readonly name = "fake";
   async transcribe() {
     return { segments: [
-      { startMs: 0, endMs: 4000, speaker: null, text: "Сьогодні обговорюємо план уроку." },
-      { startMs: 4000, endMs: 9000, speaker: null, text: "Олена підготує тест до п'ятниці." },
+      { startMs: 0, endMs: 4000, speaker: null, text: "Today we are going over the lesson plan." },
+      { startMs: 4000, endMs: 9000, speaker: null, text: "Olena will prepare the quiz by Friday." },
     ] };
   }
 }
 ```
 
-- [ ] **Verify:** a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints Ukrainian segments with timestamps.
+- [ ] **Verify:** a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints English segments with timestamps.
 - [ ] **Commit:** `feat(api): speech-to-text interface with openai adapter`
 
 > File size limit: this API accepts files up to 25 MB. At 24 kbps Opus that is ~2 hours. For longer recordings, split with ffmpeg (`-f segment -segment_time 1800`) and offset the timestamps.
@@ -850,7 +924,7 @@ export async function transcribeJob(recordingId: string) {
     await rm(dir, { recursive: true, force: true });
   }
 
-  await queues.notes.add("notes", { recordingId }, { jobId: `notes:${recordingId}` });
+  await queues.notes.add("notes", { recordingId }, { jobId: `notes-${recordingId}` });
 }
 ```
 
@@ -864,10 +938,10 @@ export async function transcribeJob(recordingId: string) {
 // apps/api/src/ai/notes/prompts.ts
 import type { RecordingMode } from "@vn/shared";
 
-const base = (lang: string) => `
+const base = `
 You turn transcripts into clear, faithful notes.
 Rules:
-- Write all notes in ${lang === "en" ? "English" : "Ukrainian"}.
+- Write all notes in English.
 - Only state what was actually said. If something is unclear, put it in openQuestions.
 - actionItems: concrete tasks that someone said they or another person will do. Keep owner/dueDate null if not said.
 - proposals: your own useful suggestions or next steps based on the content (max 5). Make them specific.
@@ -879,8 +953,8 @@ const modeRules: Record<RecordingMode, string> = {
   memo:    "This is a personal voice memo. Fill ideas and turn intentions into actionItems with owner = null.",
 };
 
-export const systemPrompt = (mode: RecordingMode, notesLanguage: string) =>
-  `${base(notesLanguage)}\n\n${modeRules[mode]}`;
+export const systemPrompt = (mode: RecordingMode) => `${base}\n\n${modeRules[mode]}`;
+// Phase 2 (Ukrainian): add a notesLanguage parameter back here and in NotesGenerator.generate
 ```
 
 - [ ] **Commit:** `feat(api): notes prompts per recording mode`
@@ -895,7 +969,7 @@ import type { Notes, RecordingMode, Segment } from "@vn/shared";
 
 export interface NotesGenerator {
   readonly name: string;
-  generate(segments: Segment[], mode: RecordingMode, notesLanguage: string): Promise<Notes>;
+  generate(segments: Segment[], mode: RecordingMode): Promise<Notes>;
 }
 
 /** "[12:05] Speaker 1: text" — timestamps help the model and let us link back later */
@@ -922,23 +996,23 @@ export class ClaudeNotes implements NotesGenerator {
   readonly name = "claude";
   private client = new Anthropic();   // reads ANTHROPIC_API_KEY
 
-  async generate(segments: Segment[], mode: RecordingMode, lang: string): Promise<Notes> {
+  async generate(segments: Segment[], mode: RecordingMode): Promise<Notes> {
     const text = formatTranscript(segments);
-    if (text.length <= MAX_CHARS_PER_CALL) return this.call(mode, lang, text);
+    if (text.length <= MAX_CHARS_PER_CALL) return this.call(mode, text);
 
     // MAP: notes for each part
     const parts = splitByChars(text, MAX_CHARS_PER_CALL);
-    const partial = await Promise.all(parts.map((p) => this.call(mode, lang, p)));
+    const partial = await Promise.all(parts.map((p) => this.call(mode, p)));
     // REDUCE: merge partial notes into one
-    return this.call(mode, lang,
+    return this.call(mode,
       `Merge these partial notes from consecutive parts of ONE recording. Remove duplicates.\n\n${JSON.stringify(partial)}`);
   }
 
-  private async call(mode: RecordingMode, lang: string, content: string): Promise<Notes> {
+  private async call(mode: RecordingMode, content: string): Promise<Notes> {
     const res = await this.client.messages.create({
       model: config.NOTES_MODEL,
-      max_tokens: 4096,
-      system: systemPrompt(mode, lang),
+      max_tokens: 8192,                     // notes for a long lecture can exceed 4096 tokens
+      system: systemPrompt(mode),
       tools: [{
         name: "save_notes",
         description: "Save the structured notes for this recording.",
@@ -947,6 +1021,8 @@ export class ClaudeNotes implements NotesGenerator {
       tool_choice: { type: "tool", name: "save_notes" },   // force structured output
       messages: [{ role: "user", content }],
     });
+    // a cut-off tool call is invalid JSON: fail clearly instead of a confusing Zod error
+    if (res.stop_reason === "max_tokens") throw new Error("Notes were cut off (max_tokens)");
     const block = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
     if (!block) throw new Error("Model returned no notes");
     return Notes.parse(block.input);                      // runtime check, retried by BullMQ if invalid
@@ -966,7 +1042,7 @@ function splitByChars(text: string, max: number) {
 }
 ```
 
-- [ ] **Verify:** unit test `splitByChars` (never cuts a line, no empty parts). Manual script `try-notes.ts` on a real Ukrainian transcript → valid `Notes` JSON.
+- [ ] **Verify:** unit test `splitByChars` (never cuts a line, no empty parts). Manual script `try-notes.ts` on a real English transcript → valid `Notes` JSON.
 - [ ] **Commit:** `feat(api): claude notes generator with structured output and map-reduce`
 
 > Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you implement this; the model is configurable via `NOTES_MODEL`.
@@ -988,8 +1064,7 @@ export async function notesJob(recordingId: string) {
     return repo.update(recordingId, { status: "failed", error: "No speech detected" });
   }
 
-  const notesLang = await repo.getUserNotesLanguage(rec.user_id);   // "uk" | "en"
-  const notes = await notesGenerator.generate(segments, rec.mode, notesLang);
+  const notes = await notesGenerator.generate(segments, rec.mode);
 
   await repo.transaction(async (trx) => {
     await trx.insertNotes(recordingId, notes);                       // version = last + 1
@@ -1032,8 +1107,9 @@ export class ChunkUploader {
         headers: { "Content-Type": "application/octet-stream" },
         body: blob,
       });
-    } catch (e) {
-      if (attempt >= 5) { this.failed = true; throw e; }
+    } catch {
+      // give up on this chunk but keep the chain alive for the next ones; flush() reports it
+      if (attempt >= 5) { this.failed = true; return; }
       await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
       return this.upload(blob, index, attempt + 1);
     }
@@ -1097,14 +1173,14 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 }
 ```
 
-- [ ] **Verify:** record 35 s → 4 chunks uploaded (check MinIO console). Turn Wi-Fi off for 15 s mid-recording → chunks still arrive after reconnect.
+- [ ] **Verify:** record 35 s → 4 chunks uploaded (check the RustFS console). Turn Wi-Fi off for 15 s mid-recording → chunks still arrive after reconnect.
 - [ ] **Commit:** `feat(web): media recorder hook with ordered chunk uploads`
 
 > Duration from `Date.now()` includes paused time — subtract pauses if you add a visible timer. Stretch goal: keep un-uploaded chunks in IndexedDB so a closed tab doesn't lose audio.
 
 ### Task 1.11 — Record page
 - [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`
-- [ ] **Steps:** mode selector (meeting / lesson / memo), language selector (auto / uk / en), big Record / Pause / Stop button, timer, a visible red "Recording" indicator, and a short consent reminder ("Tell everyone they are being recorded").
+- [ ] **Steps:** mode selector (meeting / lesson / memo), big Record / Pause / Stop button, timer, a visible red "Recording" indicator, and a short consent reminder ("Tell everyone they are being recorded").
 - [ ] Flow on **Record**: `POST /recordings` → create `ChunkUploader(id)` → `start()`.
 - [ ] Flow on **Stop**: `stop()` → `uploader.flush()` → `POST /recordings/:id/finish { chunkCount, durationMs }` → navigate to the detail page.
 - [ ] **Verify:** record → stop → redirected to detail page showing status `uploaded` → `transcribing`.
@@ -1131,7 +1207,7 @@ const { data } = useQuery({
 - [ ] **Steps:**
   - [ ] `AudioPlayer`: gets a signed URL from `GET /recordings/:id/audio`, exposes `seek(ms)` via a ref.
   - [ ] `Transcript`: list of segments with timestamps; click a line → `player.seek(startMs)`; highlight the line that is playing (`timeupdate` event).
-  - [ ] `NotesEditor`: sections Summary, Key points, Decisions, Action items (checkboxes), Proposals, Open questions (+ Concepts / Review questions for lessons, Ideas for memos). Inline editing, **Save** → `PUT /recordings/:id/notes`.
+  - [ ] `NotesEditor`: sections Summary, Key points, Decisions, Action items (checkboxes), Proposals, Open questions (+ Concepts / Review questions for lessons, Ideas for memos). Inline editing, **Save** → `PUT /recordings/:id/notes`. The API also replaces `action_items` from the saved notes, the same way the notes job does, so edits show up in the Phase 2 action-items page.
   - [ ] Processing state: show a progress step (Uploaded → Transcribing → Writing notes → Ready).
 - [ ] **Verify:** clicking a transcript line jumps the audio to that moment; edits survive a page reload.
 - [ ] **Commit:** `feat(web): recording detail with player, transcript and notes editor`
@@ -1152,6 +1228,9 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
       : "",
     list("Proposals", n.proposals),
     list("Open questions", n.openQuestions),
+    n.concepts.length
+      ? `## Concepts\n${n.concepts.map((c) => `- **${c.term}**: ${c.explanation}`).join("\n")}\n`
+      : "",
     list("Ideas", n.ideas),
     list("Review questions", n.reviewQuestions),
   ].filter(Boolean).join("\n");
@@ -1159,19 +1238,18 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 ```
 
 - [ ] Buttons: **Copy as Markdown** and **Download .md**.
-- [ ] **Verify:** unit test with a sample `Notes` object; empty sections are not printed.
+- [ ] **Verify:** unit test with a sample `Notes` object; empty sections are not printed. (This is the shared package's first test: add `"test": "vitest run"` to `packages/shared/package.json`.)
 - [ ] **Commit:** `feat: markdown export of notes`
 
 ### Task 1.15 — Delete, retry, limits
 - [ ] `DELETE /recordings/:id` removes DB rows (cascade) **and** `storage.deletePrefix(keys.prefix(id))`.
-- [ ] `POST /recordings/:id/retry`: if no segments → enqueue `transcribe`, else enqueue `notes`.
+- [ ] `POST /recordings/:id/retry`: if no segments → enqueue `transcribe`, else enqueue `notes`. **Remove the old job first** (`await (await queue.getJob(jobId))?.remove()`), because BullMQ keeps failed jobs and ignores `add()` with an existing id, so the retry would silently do nothing.
 - [ ] Monthly minutes limit: sum `duration_ms` this month per user; reject `finish` with 402 + friendly message when over `MONTHLY_MINUTES_LIMIT`.
-- [ ] **Verify:** after delete, MinIO has no objects under the prefix; retry fixes a recording that failed because the API key was missing.
+- [ ] **Verify:** after delete, storage has no objects under the prefix; retry fixes a recording that failed because the API key was missing.
 - [ ] **Commit:** `feat(api): delete, retry and monthly usage limit`
 
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
-- [ ] Record **5 minutes of Ukrainian** speech in Chrome → notes in Ukrainian appear without any manual step.
-- [ ] Record **2 minutes of English** with language = auto → correct transcript.
+- [ ] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [ ] Lesson mode produces concepts + review questions; memo mode produces ideas.
 - [ ] Proposals are specific to the content, not generic advice.
 - [ ] Network drop during recording does not lose audio.
@@ -1184,6 +1262,7 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 ## 7. Later phases (overview — will be broken into tasks when you get there)
 
 ### Phase 2 — Quality and search (≈2 weeks)
+- **Ukrainian support:** add `uk` / `auto` to `LanguageCode`, a language selector on the Record page, a per-user notes-language setting (needs storage, e.g. a `user_settings` table), and a `notesLanguage` parameter in prompts and `NotesGenerator`. Compare STT providers on Ukrainian samples first.
 - Speaker labels (diarization): switch/add an STT adapter that returns speakers; UI to rename "Speaker 1" → a real name (stored per recording).
 - Embeddings for transcript segments (fill the `embedding` column), HNSW index on pgvector.
 - Search page: full-text (`tsvector`) + semantic search combined.
@@ -1226,7 +1305,7 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 |---|---|
 | **Consent / privacy** — recording other people | Clear recording indicator + reminder in UI. For lessons, get the school's and parents' permission before recording real classes. Easy full delete. |
 | Cloud costs grow | Monthly minutes limit from day one; small Opus files; cost tracking in Phase 7 |
-| Ukrainian transcription quality | Compare providers on real samples before choosing; adapter makes switching cheap |
+| Transcription quality (English now, Ukrainian later) | Compare providers on real samples before choosing; adapter makes switching cheap |
 | AI invents facts in notes | Prompt rules + "only what was said" + openQuestions; user can edit everything |
 | Safari / iOS audio quirks | Test Safari in Phase 1; Phase 4 uses native recording on mobile |
 | System audio capture on desktop | Spike first in Phase 3 before committing to the design |
