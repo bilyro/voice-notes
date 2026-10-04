@@ -1,3 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm only runs dependency install scripts that are listed here.
+# esbuild's postinstall is optional: its binary comes from a platform-specific package.
+allowBuilds:
+  esbuild: false
