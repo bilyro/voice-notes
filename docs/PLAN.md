@@ -483,8 +483,8 @@ export async function requireUser(req: FastifyRequest, reply: FastifyReply) {
 - [x] **Commit:** `feat(api): email/password auth with Better Auth`
 
 ### Task 0.7 — Web skeleton
-- [ ] **Files:** `apps/web/*` (Vite React TS template), `src/router.tsx`, `src/lib/api.ts`, login + sign-up pages
-- [ ] **Steps:**
+- [x] **Files:** `apps/web/*` (Vite React TS template), `src/router.tsx`, `src/lib/api.ts`, login + sign-up pages
+- [x] **Steps:**
 
 ```bash
 pnpm create vite apps/web --template react-ts
@@ -502,8 +502,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 ```
 
-- [ ] **Verify:** open `http://localhost:5173`, sign up, land on an empty "Recordings" page; page shows the result of `/health`.
-- [ ] **Commit:** `feat(web): vite react skeleton with auth pages`
+- [x] **Verify:** open `http://localhost:5173`, sign up, land on an empty "Recordings" page; page shows the result of `/health`.
+- [x] **Commit:** `feat(web): vite react skeleton with auth pages`
 
 ### Task 0.8 — CI
 - [ ] **Files:** `.github/workflows/ci.yml`
