@@ -387,8 +387,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 - [x] **Commit:** `feat(api): fastify skeleton with typed config and health route`
 
 ### Task 0.5 — Database + migrations
-- [ ] **Files:** `apps/api/knexfile.ts`, `apps/api/src/db.ts`, `apps/api/migrations/001_init.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add knex pg`
+- [x] **Files:** `apps/api/knexfile.ts`, `apps/api/src/db.ts`, `apps/api/migrations/001_init.ts`
+- [x] **Steps:** `pnpm --filter @vn/api add knex pg`
 
 ```ts
 // apps/api/migrations/001_init.ts
@@ -453,8 +453,8 @@ export async function down(knex: Knex) {
 }
 ```
 
-- [ ] **Verify:** `pnpm --filter @vn/api knex migrate:latest` then `\dt` in psql shows the 4 tables. `migrate:rollback` + `migrate:latest` works again.
-- [ ] **Commit:** `feat(api): initial database schema`
+- [x] **Verify:** `pnpm --filter @vn/api knex migrate:latest` then `\dt` in psql shows the 4 tables. `migrate:rollback` + `migrate:latest` works again.
+- [x] **Commit:** `feat(api): initial database schema`
 
 > The embedding dimension (1536) depends on the embedding model you pick in Phase 2 — change it then with a new migration.
 
