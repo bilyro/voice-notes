@@ -13,8 +13,11 @@ An app that **listens**, **saves what was said**, and turns it into **notes and 
 | Platforms | Web, Desktop (Electron), Mobile (Expo / React Native) |
 | Use cases | Meetings/calls, lessons/lectures, personal voice memos (all three) |
 | Processing | Cloud APIs first, local (offline) processing added later |
+| Cost | **Free stack first ($0)**: Groq free tier for speech + notes, everything self-hosted on one free server. **Paid stack second** (Phase 1b): OpenAI speech-to-text + Claude notes. Switching = 2 env variables |
 | Languages | **English only for now**: speech-to-text is forced to `en` and notes are written in English. Ukrainian, auto-detect and a notes-language setting come later (Phase 2) |
 | Build order | Backend + Web first → Desktop → Mobile → Live mode → Local processing |
+| Business model | **Closed-source SaaS**: private GitHub repo, proprietary code (no open-source license), users pay a subscription. Portfolio = public landing page + demo video + case study; give interviewers read access to the repo on request |
+| UI design | Approved: clean white, minimal, Instrument Sans, red only for recording. Spec in `docs/DESIGN.md`, mockups in `docs/design/screens/` |
 
 **Main rule:** clients only *record* and *display*. All intelligence runs in background workers behind two interfaces (`SpeechToText`, `NotesGenerator`). Switching cloud → local later = writing a new adapter, not rewriting the app.
 
@@ -57,12 +60,14 @@ recording → uploaded → transcribing → summarizing → ready
 | Validation | Zod (shared between API and clients) | One schema = types + runtime checks |
 | DB | PostgreSQL 16 + pgvector | Data + semantic search in one place |
 | Jobs | Redis + BullMQ | Retries, backoff, progress, separate worker process |
-| Audio storage | S3-compatible (RustFS local, Cloudflare R2 prod) | Cheap, swappable. MinIO no longer publishes Docker images, so we use RustFS, which is MinIO-compatible |
+| Audio storage | S3-compatible: **RustFS locally**, **Cloudflare R2 in production** | Cheap, swappable, same code in both places. MinIO no longer publishes Docker images, so local dev uses RustFS (MinIO-compatible); production uses managed R2 (10 GB free) |
 | Audio tools | ffmpeg (in worker) | Join chunks, normalize to mono 16 kHz |
 | Auth | Better Auth (email + password to start) | Self-hosted, TS-first |
 | Web | React + Vite + React Router + TanStack Query | Simple, fast dev loop |
-| Speech-to-text (cloud) | Adapter; first example: OpenAI `whisper-1` | Returns segment timestamps (`verbose_json`); swap later for a provider with diarization |
-| Notes (cloud) | Adapter; Claude via `@anthropic-ai/sdk` | Strong structured output via forced tool use |
+| UI design | `docs/DESIGN.md` (tokens, components, rules) + reference mockups in `docs/design/screens/` | Approved design; every screen follows it |
+| Speech-to-text | One OpenAI-compatible adapter. **Free:** Groq `whisper-large-v3-turbo`. **Paid:** OpenAI `whisper-1` | Both return segment timestamps (`verbose_json`); only base URL + model change. Swap later for a provider with diarization |
+| Notes LLM | **Free:** Groq open model (`openai/gpt-oss-120b`) via JSON mode. **Paid:** Claude via `@anthropic-ai/sdk` (forced tool use) | Both behind `NotesGenerator`; shared chunking logic |
+| Free hosting | Oracle Cloud Always Free Arm VM + Docker Compose + Caddy (HTTPS) + DuckDNS (free domain) | Whole stack on one $0 server |
 | Tests | Vitest | Fast, TS-native |
 | Later | Electron, Expo, whisper.cpp, Ollama | Phases 3–6 |
 
@@ -74,11 +79,19 @@ recording → uploaded → transcribing → summarizing → ready
 
 ```
 voice-notes/
+├─ CLAUDE.md                    # rules for Claude Code
+├─ LICENSE                      # proprietary (closed SaaS)
+├─ docs/
+│  ├─ PLAN.md                   # this plan
+│  ├─ DESIGN.md                 # design spec
+│  └─ design/screens/           # reference mockups (.dc.html, not production code)
 ├─ package.json
 ├─ pnpm-workspace.yaml
 ├─ turbo.json
 ├─ tsconfig.base.json
 ├─ docker-compose.yml
+├─ docker-compose.prod.yml      # free server deployment (Task 1.16)
+├─ Caddyfile                    # HTTPS + routing on the server (Task 1.16)
 ├─ .env.example
 ├─ .github/workflows/ci.yml
 ├─ packages/
@@ -92,6 +105,7 @@ voice-notes/
 │        └─ api-client.ts              # later (Phase 4), when mobile needs it
 └─ apps/
    ├─ api/
+   │  ├─ Dockerfile                   # one image for API + worker (Task 1.16)
    │  ├─ knexfile.ts
    │  ├─ migrations/
    │  ├─ scripts/                     # auth-migrate.ts, try-stt.ts, try-notes.ts
@@ -114,10 +128,12 @@ voice-notes/
    │     ├─ audio/prepare-audio.ts
    │     ├─ ai/providers.ts                  # the ONLY place that picks adapters
    │     ├─ ai/stt/speech-to-text.ts         # interface
-   │     ├─ ai/stt/openai-stt.ts             # cloud adapter
+   │     ├─ ai/stt/openai-compatible-stt.ts  # Groq (free) + OpenAI (paid)
    │     ├─ ai/stt/fake-stt.ts               # for tests
    │     ├─ ai/notes/notes-generator.ts      # interface
-   │     ├─ ai/notes/claude-notes.ts         # cloud adapter
+   │     ├─ ai/notes/chunked-notes.ts        # shared map → reduce logic
+   │     ├─ ai/notes/groq-notes.ts           # free adapter
+   │     ├─ ai/notes/claude-notes.ts         # paid adapter
    │     ├─ ai/notes/prompts.ts
    │     └─ ai/notes/fake-notes.ts           # for tests
    └─ web/
@@ -126,20 +142,60 @@ voice-notes/
          ├─ router.tsx
          ├─ lib/api.ts
          ├─ lib/auth-client.ts
+         ├─ styles/{tokens,base}.css         # design tokens (docs/DESIGN.md)
          ├─ recorder/use-recorder.ts
          ├─ recorder/chunk-uploader.ts
          ├─ pages/{LoginPage,SignUpPage}.tsx
          ├─ pages/RecordPage.tsx
          ├─ pages/RecordingsPage.tsx
          ├─ pages/RecordingDetailPage.tsx
-         └─ components/{RequireAuth,AudioPlayer,Transcript,NotesEditor}.tsx
+         └─ components/{RequireAuth,AppShell,Sidebar,Button,AudioPlayer,Tabs,Transcript,NotesEditor}.tsx
 ```
 
 ---
 
-## 5. Phase 0 — Foundations (≈1 week)
+## 5. Cost strategy — free first, paid later
+
+You build and test everything on a **$0 stack**, then switch the AI parts to **paid APIs** when you start recording other people or need better quality. Hosting stays free in both stages. Prices below were checked in October 2026 — free tiers change often (Oracle halved its free VM in 2026), so re-check each provider's pricing page before you rely on it.
+
+### Stage 1 — Free stack (Phases 0–1)
+
+| Part | Free choice | Free limits (Oct 2026) |
+|---|---|---|
+| Development | Your computer + `docker-compose.yml` | none |
+| Server | Oracle Cloud Always Free, Arm VM `VM.Standard.A1.Flex` | 2 OCPU, 12 GB RAM, 200 GB disk; creating the VM often fails with "out of capacity" — retry |
+| Postgres, Redis | Self-hosted in Docker on that VM (Postgres + pgvector, Redis) | limited only by the VM |
+| Audio storage | Cloudflare R2 | 10 GB storage free (≈ 900 hours of audio at 24 kbps), free egress; Cloudflare may ask for a payment method to enable R2 (verification only) |
+| Domain + HTTPS | DuckDNS subdomain + Caddy (automatic HTTPS) | free; HTTPS is required for the browser microphone |
+| Speech-to-text | Groq `whisper-large-v3-turbo` | ~8 h of audio/day, 2,000 requests/day, 25 MB per file |
+| Notes LLM | Groq `openai/gpt-oss-120b` | small tokens-per-minute and tokens-per-day limits → long recordings are processed in small chunks with pauses (a 1-hour recording takes a few minutes) |
+
+⚠️ **Privacy rule for the free stage:** Groq's free tier gives no data-privacy guarantees. Use it only for **test recordings of your own voice** (or people who explicitly agreed). Real meetings and classes wait for Stage 2.
+
+### Stage 2 — Paid stack (Phase 1b)
+
+| Part | Paid choice | Price (Oct 2026) |
+|---|---|---|
+| Server, DB, storage | unchanged (Oracle free VM + R2) | $0 (R2 above 10 GB: $0.015 per GB-month) |
+| Speech-to-text | OpenAI `whisper-1` | $0.006 / min = $0.36 / hour |
+| Notes LLM | Claude Haiku 4.5 (cheapest) or Claude Sonnet 5.5 (better) | ≈ $0.02–0.05 per 1-hour recording |
+
+Why `whisper-1` and not the cheaper `gpt-4o-mini-transcribe` ($0.003/min): the gpt-4o transcribe models return only plain text/JSON without segment timestamps, and the app needs timestamps for click-to-seek. In Phase 2, `gpt-4o-transcribe-diarize` (same $0.006/min) is the candidate for speaker labels.
+
+**Rough monthly cost:** 20 hours of recordings ≈ **$8** (20 × $0.36 + notes). Always set `MONTHLY_MINUTES_LIMIT` and a spend limit in the OpenAI and Anthropic consoles.
+
+### When to switch from free to paid
+- you want to record other people (meetings, classes),
+- you hit Groq's daily limits,
+- notes quality from the free model is not good enough for you (compare on the same recordings — Task 1b.3).
+
+---
+
+## 6. Phase 0 — Foundations (≈1 week)
 
 **Goal:** the web app logs in and calls a typed `/health` endpoint; DB, Redis and storage run locally.
+
+> Tasks 0.1–0.8 are written **as built**. Changes decided after they were built are collected in Task 0.9.
 
 ### Task 0.1 — Create the monorepo
 - [x] **Files:** `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `.gitignore`, `.prettierrc`, `eslint.config.js`
@@ -556,6 +612,45 @@ jobs:
 - [x] **Verify:** push to GitHub → green check.
 - [x] **Commit:** `ci: lint, typecheck, test on every push`
 
+### Task 0.9 — Catch-up: align Phase 0 with decisions made after it was built
+Phase 0 was built before these decisions: free stack first, closed SaaS, the approved design, and `@vn/shared` being imported by the apps. This task brings the existing code in line. One session; skip any item that is already true.
+
+- [ ] **Turbo:** in `turbo.json`, `dev` gets `"dependsOn": ["^build"]`, so `pnpm dev` on a fresh clone builds `@vn/shared` before the apps import it.
+- [ ] **Repo (closed SaaS):** the GitHub repo is **Private**. Add `LICENSE` with `Copyright (c) 2026 <your full name>. All rights reserved.` and the proprietary notice (no MIT). `.gitignore` ignores `.env` and `.env.*` but not `.env.example`. Run `git log --all --oneline -- .env`: it must print nothing. If a real key was ever committed, revoke it in the provider's console.
+- [ ] **`.env.example`:** add the AI provider block and make Haiku the paid-stage default:
+
+```bash
+# --- AI providers: FREE stack by default (Stage 1) ---
+STT_PROVIDER=groq                 # groq (free) | openai (paid)
+NOTES_PROVIDER=groq               # groq (free) | claude (paid)
+GROQ_API_KEY=                     # console.groq.com, no card needed
+GROQ_NOTES_MODEL=openai/gpt-oss-120b
+GROQ_NOTES_MAX_CHARS=16000        # small chunks because free-tier tokens/minute are low
+# --- paid stack only (Stage 2, Phase 1b) ---
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+NOTES_MODEL=claude-haiku-4-5
+```
+
+- [ ] **`config.ts`:** add these fields to `Env` and export the Groq URL. Do **not** require any AI key here: the API server must start without them (the worker checks keys in Task 1.6).
+
+```ts
+  STT_PROVIDER: z.enum(["groq", "openai"]).default("groq"),
+  NOTES_PROVIDER: z.enum(["groq", "claude"]).default("groq"),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_NOTES_MODEL: z.string().default("openai/gpt-oss-120b"),
+  GROQ_NOTES_MAX_CHARS: z.coerce.number().default(16_000),
+  NOTES_MODEL: z.string().default("claude-haiku-4-5"),   // replaces the old default
+```
+
+```ts
+export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";   // Groq is OpenAI-compatible
+```
+
+- [ ] **Design (Task 0.7 was built before the design existed):** read `docs/DESIGN.md`. Load Instrument Sans (400/500/600/700) in `apps/web/index.html`; create `src/styles/tokens.css` (DESIGN.md section 2) and `src/styles/base.css` (font, colors, `:focus-visible` outline); build `AppShell` + `Sidebar` like the reference screens (only Recordings and New recording visible for now); restyle sign-in / sign-up with the tokens (centered 400px column, h1, two inputs, black primary button).
+- [ ] **Verify:** with an `.env` that has **no AI keys**, `docker compose up -d && pnpm dev` starts API + web from a clean `packages/shared/dist`; the web app shows the sidebar shell and an empty Recordings page; at phone width the sidebar stacks on top; Tab shows a visible focus outline; `pnpm turbo lint typecheck test` is green.
+- [ ] **Commit:** `chore: align phase 0 with current plan (turbo, license, config, design)`
+
 ### ✅ Phase 0 done when
 - [ ] `docker compose up -d && pnpm dev` starts API + web
 - [ ] Sign up / sign in works
@@ -563,9 +658,9 @@ jobs:
 
 ---
 
-## 6. Phase 1 — Web MVP, batch mode (≈2–3 weeks)
+## 7. Phase 1 — Web MVP on the free stack (≈3 weeks)
 
-**Goal:** record in the browser → audio uploads in chunks → transcript → notes & proposals appear automatically → you can edit and export them.
+**Goal:** record in the browser → audio uploads in chunks → transcript → notes & proposals appear automatically → you can edit and export them. Everything runs on the free stack ($0) and goes online in Task 1.16.
 
 ### Task 1.0 — English-only language field
 - [ ] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/api/migrations/002_english_only.ts`
@@ -610,7 +705,7 @@ import { config } from "../config.js";
 const s3 = new S3Client({
   endpoint: config.S3_ENDPOINT,
   region: config.S3_REGION,
-  forcePathStyle: true,                        // needed for RustFS/MinIO
+  forcePathStyle: true,                        // needed for RustFS/MinIO, also works with R2
   credentials: { accessKeyId: config.S3_ACCESS_KEY, secretAccessKey: config.S3_SECRET_KEY },
 });
 
@@ -824,9 +919,10 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
 
 > ⚠️ Safari records `audio/mp4` instead of webm. Test concatenation there early; if fragments don't join cleanly, upload the whole recording as one chunk on stop for Safari only.
 
-### Task 1.5 — Speech-to-text interface + cloud adapter
-- [ ] **Files:** `ai/stt/speech-to-text.ts`, `ai/stt/openai-stt.ts`, `ai/stt/fake-stt.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add openai`
+### Task 1.5 — Speech-to-text interface + one adapter for free (Groq) and paid (OpenAI)
+- [ ] **Files:** `ai/stt/speech-to-text.ts`, `ai/stt/openai-compatible-stt.ts`, `ai/stt/fake-stt.ts`
+- [ ] Create a free Groq account at console.groq.com and an API key → `GROQ_API_KEY` in `.env`.
+- [ ] **Steps:** `pnpm --filter @vn/api add openai` (used for both Groq and OpenAI)
 
 ```ts
 // apps/api/src/ai/stt/speech-to-text.ts
@@ -844,27 +940,31 @@ export interface SpeechToText {
 ```
 
 ```ts
-// apps/api/src/ai/stt/openai-stt.ts
+// apps/api/src/ai/stt/openai-compatible-stt.ts
+// Groq's API is OpenAI-compatible, so ONE class serves the free and the paid provider.
 import fs from "node:fs";
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import type { SpeechToText, TranscribeOptions } from "./speech-to-text.js";
 
-export class OpenAiStt implements SpeechToText {
-  readonly name = "openai-whisper-1";
-  private client = new OpenAI();             // reads OPENAI_API_KEY
+export class OpenAiCompatibleStt implements SpeechToText {
+  constructor(
+    readonly name: string,
+    private client: OpenAI,
+    private model: string,   // "whisper-large-v3-turbo" (Groq, free) | "whisper-1" (OpenAI, paid)
+  ) {}
 
   async transcribe(localPath: string, opts: TranscribeOptions) {
     const res = await this.client.audio.transcriptions.create({
       file: fs.createReadStream(localPath),
-      model: "whisper-1",
-      response_format: "verbose_json",
+      model: this.model,
+      response_format: "verbose_json",         // segment timestamps, needed for click-to-seek
       timestamp_granularities: ["segment"],
       language: opts.language,                 // forcing the language beats auto-detect on accuracy
     });
     const segments = (res.segments ?? []).map((s) => ({
       startMs: Math.round(s.start * 1000),
       endMs: Math.round(s.end * 1000),
-      speaker: null,                         // this API has no diarization
+      speaker: null,                         // no diarization yet
       text: s.text.trim(),
     }));
     return { segments, language: res.language };
@@ -885,21 +985,40 @@ export class FakeStt implements SpeechToText {
 }
 ```
 
-- [ ] **Verify:** a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints English segments with timestamps.
-- [ ] **Commit:** `feat(api): speech-to-text interface with openai adapter`
+- [ ] **Verify:** with `STT_PROVIDER=groq`, a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints English segments with timestamps ($0).
+- [ ] **Commit:** `feat(api): openai-compatible speech-to-text adapter (groq free / openai paid)`
 
-> File size limit: this API accepts files up to 25 MB. At 24 kbps Opus that is ~2 hours. For longer recordings, split with ffmpeg (`-f segment -segment_time 1800`) and offset the timestamps.
+> Why `whisper-1` for the paid stage and not the cheaper gpt-4o transcribe models: those return only text/JSON without segment timestamps, and the app needs timestamps. File size limit: both Groq (free tier) and OpenAI accept files up to 25 MB. At 24 kbps Opus that is ~2 hours. For longer recordings, split with ffmpeg (`-f segment -segment_time 1800`) and offset the timestamps.
 
 ### Task 1.6 — Transcribe job
 - [ ] **Files:** `apps/api/src/jobs/transcribe.job.ts`, `apps/api/src/ai/providers.ts`
 
 ```ts
 // apps/api/src/ai/providers.ts — the ONLY place that picks adapters
-import { OpenAiStt } from "./stt/openai-stt.js";
+import OpenAI from "openai";
+import { config, GROQ_BASE_URL } from "../config.js";
+import { OpenAiCompatibleStt } from "./stt/openai-compatible-stt.js";
+import type { SpeechToText } from "./stt/speech-to-text.js";
+import { GroqNotes } from "./notes/groq-notes.js";
 import { ClaudeNotes } from "./notes/claude-notes.js";
-export const stt = new OpenAiStt();
-export const notesGenerator = new ClaudeNotes();
-// Phase 6: choose WhisperCppStt / OllamaNotes based on user setting here
+import type { NotesGenerator } from "./notes/notes-generator.js";
+
+// Only the worker imports this file: fail fast there if a selected provider has no API key.
+const keyFor = { groq: "GROQ_API_KEY", openai: "OPENAI_API_KEY", claude: "ANTHROPIC_API_KEY" } as const;
+for (const provider of new Set([config.STT_PROVIDER, config.NOTES_PROVIDER])) {
+  if (!config[keyFor[provider]]) throw new Error(`${keyFor[provider]} is required because a provider is set to "${provider}"`);
+}
+
+export const stt: SpeechToText =
+  config.STT_PROVIDER === "openai"
+    ? new OpenAiCompatibleStt("openai-whisper-1", new OpenAI({ apiKey: config.OPENAI_API_KEY }), "whisper-1")
+    : new OpenAiCompatibleStt("groq-whisper-large-v3-turbo",
+        new OpenAI({ apiKey: config.GROQ_API_KEY, baseURL: GROQ_BASE_URL }), "whisper-large-v3-turbo");
+
+export const notesGenerator: NotesGenerator =
+  config.NOTES_PROVIDER === "claude" ? new ClaudeNotes() : new GroqNotes();
+
+// Phase 6: add WhisperCppStt / OllamaNotes here
 ```
 
 ```ts
@@ -928,7 +1047,7 @@ export async function transcribeJob(recordingId: string) {
 }
 ```
 
-- [ ] **Verify:** integration test with `FakeStt` → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry.
+- [ ] **Verify:** integration test with `FakeStt` → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry. Starting the worker without `GROQ_API_KEY` fails with a clear message; the API server still starts.
 - [ ] **Commit:** `feat(api): transcribe job`
 
 ### Task 1.7 — Notes prompts per mode
@@ -959,9 +1078,10 @@ export const systemPrompt = (mode: RecordingMode) => `${base}\n\n${modeRules[mod
 
 - [ ] **Commit:** `feat(api): notes prompts per recording mode`
 
-### Task 1.8 — NotesGenerator interface + Claude adapter (with long-transcript handling)
-- [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add @anthropic-ai/sdk`
+### Task 1.8 — NotesGenerator: shared chunking + free (Groq) and paid (Claude) adapters
+- [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`
+- [ ] **Steps:** `pnpm --filter @vn/api add @anthropic-ai/sdk` (the `openai` package from Task 1.5 is reused for Groq)
+- [ ] Build `chunked-notes.ts` + `groq-notes.ts` **now**; `claude-notes.ts` can be written now but is only switched on in Phase 1b.
 
 ```ts
 // apps/api/src/ai/notes/notes-generator.ts
@@ -982,33 +1102,96 @@ export function formatTranscript(segments: Segment[]) {
 ```
 
 ```ts
-// apps/api/src/ai/notes/claude-notes.ts
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
-import { Notes, type RecordingMode, type Segment } from "@vn/shared";
-import { config } from "../../config.js";
+// apps/api/src/ai/notes/chunked-notes.ts — map → reduce shared by all adapters
+import type { Notes, RecordingMode, Segment } from "@vn/shared";
 import { formatTranscript, type NotesGenerator } from "./notes-generator.js";
-import { systemPrompt } from "./prompts.js";
 
-const MAX_CHARS_PER_CALL = 60_000;   // above this, use map → reduce
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export class ClaudeNotes implements NotesGenerator {
-  readonly name = "claude";
-  private client = new Anthropic();   // reads ANTHROPIC_API_KEY
+export abstract class ChunkedNotesGenerator implements NotesGenerator {
+  abstract readonly name: string;
+  protected abstract readonly maxCharsPerCall: number;
+  protected abstract readonly pauseBetweenCallsMs: number;   // respects per-minute rate limits
+  protected abstract callModel(mode: RecordingMode, content: string): Promise<Notes>;
 
   async generate(segments: Segment[], mode: RecordingMode): Promise<Notes> {
     const text = formatTranscript(segments);
-    if (text.length <= MAX_CHARS_PER_CALL) return this.call(mode, text);
+    if (text.length <= this.maxCharsPerCall) return this.callModel(mode, text);
 
-    // MAP: notes for each part
-    const parts = splitByChars(text, MAX_CHARS_PER_CALL);
-    const partial = await Promise.all(parts.map((p) => this.call(mode, p)));
+    // MAP: notes for each part — sequential, so we never burst over rate limits
+    const partial: Notes[] = [];
+    for (const part of splitByChars(text, this.maxCharsPerCall)) {
+      partial.push(await this.callModel(mode, part));
+      await sleep(this.pauseBetweenCallsMs);
+    }
     // REDUCE: merge partial notes into one
-    return this.call(mode,
+    return this.callModel(mode,
       `Merge these partial notes from consecutive parts of ONE recording. Remove duplicates.\n\n${JSON.stringify(partial)}`);
   }
+}
 
-  private async call(mode: RecordingMode, content: string): Promise<Notes> {
+export function splitByChars(text: string, max: number) {
+  const parts: string[] = [];
+  let cur = "";
+  for (const line of text.split("\n")) {
+    if (cur.length + line.length > max && cur) { parts.push(cur); cur = ""; }
+    cur += line + "\n";
+  }
+  if (cur) parts.push(cur);
+  return parts;
+}
+```
+
+```ts
+// apps/api/src/ai/notes/groq-notes.ts — FREE stage
+import OpenAI from "openai";
+import { z } from "zod";
+import { Notes, type RecordingMode } from "@vn/shared";
+import { config, GROQ_BASE_URL } from "../../config.js";
+import { ChunkedNotesGenerator } from "./chunked-notes.js";
+import { systemPrompt } from "./prompts.js";
+
+const schemaText = JSON.stringify(z.toJSONSchema(Notes));
+
+export class GroqNotes extends ChunkedNotesGenerator {
+  readonly name = "groq";
+  protected readonly maxCharsPerCall = config.GROQ_NOTES_MAX_CHARS;  // ≈ 4k tokens per call
+  protected readonly pauseBetweenCallsMs = 60_000;                   // free tier: low tokens/minute
+  private client = new OpenAI({ apiKey: config.GROQ_API_KEY, baseURL: GROQ_BASE_URL });
+
+  protected async callModel(mode: RecordingMode, content: string): Promise<Notes> {
+    const res = await this.client.chat.completions.create({
+      model: config.GROQ_NOTES_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: `${systemPrompt(mode)}\n\nReply with ONLY a JSON object that matches this JSON Schema:\n${schemaText}` },
+        { role: "user", content },
+      ],
+    });
+    const choice = res.choices[0];
+    // a cut-off answer is invalid JSON: fail clearly instead of a confusing parse error
+    if (choice?.finish_reason === "length") throw new Error("Notes were cut off (length)");
+    return Notes.parse(JSON.parse(choice?.message.content ?? ""));   // invalid → throws → BullMQ retries
+  }
+}
+```
+
+```ts
+// apps/api/src/ai/notes/claude-notes.ts — PAID stage (Phase 1b)
+import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+import { Notes, type RecordingMode } from "@vn/shared";
+import { config } from "../../config.js";
+import { ChunkedNotesGenerator } from "./chunked-notes.js";
+import { systemPrompt } from "./prompts.js";
+
+export class ClaudeNotes extends ChunkedNotesGenerator {
+  readonly name = "claude";
+  protected readonly maxCharsPerCall = 60_000;   // big context, no need for small chunks
+  protected readonly pauseBetweenCallsMs = 0;
+  private client = new Anthropic();              // reads ANTHROPIC_API_KEY
+
+  protected async callModel(mode: RecordingMode, content: string): Promise<Notes> {
     const res = await this.client.messages.create({
       model: config.NOTES_MODEL,
       max_tokens: 8192,                     // notes for a long lecture can exceed 4096 tokens
@@ -1028,24 +1211,14 @@ export class ClaudeNotes implements NotesGenerator {
     return Notes.parse(block.input);                      // runtime check, retried by BullMQ if invalid
   }
 }
-
-function splitByChars(text: string, max: number) {
-  const lines = text.split("\n");
-  const parts: string[] = [];
-  let cur = "";
-  for (const line of lines) {
-    if (cur.length + line.length > max && cur) { parts.push(cur); cur = ""; }
-    cur += line + "\n";
-  }
-  if (cur) parts.push(cur);
-  return parts;
-}
 ```
 
-- [ ] **Verify:** unit test `splitByChars` (never cuts a line, no empty parts). Manual script `try-notes.ts` on a real English transcript → valid `Notes` JSON.
-- [ ] **Commit:** `feat(api): claude notes generator with structured output and map-reduce`
+> **Rate limits (free stage):** if Groq returns HTTP 429, the job fails and BullMQ retries it. For the `notes` queue use `attempts: 5` and `backoff: { type: "fixed", delay: 60_000 }` so retries wait a full minute. Check your real limits at console.groq.com (Settings → Limits) and tune `GROQ_NOTES_MAX_CHARS`.
 
-> Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you implement this; the model is configurable via `NOTES_MODEL`.
+- [ ] **Verify:** unit test `splitByChars` (never cuts a line, no empty parts). Manual script `try-notes.ts` with `NOTES_PROVIDER=groq` on a real English transcript (short and > 20 minutes) → valid `Notes` JSON ($0).
+- [ ] **Commit:** `feat(api): notes generators with shared chunking (groq free, claude paid)`
+
+> Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you switch to Claude; the model is configurable via `NOTES_MODEL`.
 
 ### Task 1.9 — Notes job
 - [ ] **Files:** `apps/api/src/jobs/notes.job.ts`
@@ -1179,8 +1352,9 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 > Duration from `Date.now()` includes paused time — subtract pauses if you add a visible timer. Stretch goal: keep un-uploaded chunks in IndexedDB so a closed tab doesn't lose audio.
 
 ### Task 1.11 — Record page
-- [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`
-- [ ] **Steps:** mode selector (meeting / lesson / memo), big Record / Pause / Stop button, timer, a visible red "Recording" indicator, and a short consent reminder ("Tell everyone they are being recorded").
+- [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`, `components/SegmentedControl.tsx`, `components/RecordButton.tsx`, `components/InfoNote.tsx`
+- [ ] **Design:** before recording = `docs/design/screens/NewRecording.dc.html`; while recording = `docs/design/screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop).
+- [ ] **Steps:** segmented control Meeting / Lesson / Voice memo with the one-line hint of what the notes focus on, optional title, microphone select with input-level bar, no language selector (English only), Free plan info note (Task 1b.5 text), big red record button + consent reminder ("Tell everyone they are being recorded"). While recording: "Recording" badge, big timer, waveform, "Saved up to mm:ss", Pause and Stop and save buttons.
 - [ ] Flow on **Record**: `POST /recordings` → create `ChunkUploader(id)` → `start()`.
 - [ ] Flow on **Stop**: `stop()` → `uploader.flush()` → `POST /recordings/:id/finish { chunkCount, durationMs }` → navigate to the detail page.
 - [ ] **Verify:** record → stop → redirected to detail page showing status `uploaded` → `transcribing`.
@@ -1188,6 +1362,7 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 
 ### Task 1.12 — Recordings list with live status
 - [ ] **Files:** `apps/web/src/pages/RecordingsPage.tsx`
+- [ ] **Design:** `docs/design/screens/Recordings.dc.html`.
 
 ```ts
 const { data } = useQuery({
@@ -1199,11 +1374,13 @@ const { data } = useQuery({
 });
 ```
 
-- [ ] Show title, mode badge, date, duration, status chip; `failed` shows a **Retry** button.
+- [ ] Rows: icon tile per mode, title, "Mode, duration", status (ready / processing with progress bar / failed with **Try again**), date; grouped by "This week" / "Last week" / month. Filter pills by mode work now (client-side). The search field and minutes meter come later (Phase 2, Task 1b.4).
+- [ ] Empty state: "No recordings yet" + **New recording** button.
 - [ ] **Commit:** `feat(web): recordings list with status polling`
 
 ### Task 1.13 — Recording detail page
-- [ ] **Files:** `RecordingDetailPage.tsx`, `components/AudioPlayer.tsx`, `components/Transcript.tsx`, `components/NotesEditor.tsx`
+- [ ] **Files:** `RecordingDetailPage.tsx`, `components/AudioPlayer.tsx`, `components/Tabs.tsx`, `components/Transcript.tsx`, `components/NotesEditor.tsx`, `components/TimestampLink.tsx`
+- [ ] **Design:** `docs/design/screens/RecordingDetail.dc.html`: title + meta chips, action buttons, capsule audio player, then **Notes / Transcript tabs**. Notes order: summary, action items, decisions, suggested next steps (= `proposals`, grey box with the assistant label), open questions, AI disclaimer line. Lesson / memo extra sections and key points use the Decisions style.
 - [ ] **Steps:**
   - [ ] `AudioPlayer`: gets a signed URL from `GET /recordings/:id/audio`, exposes `seek(ms)` via a ref.
   - [ ] `Transcript`: list of segments with timestamps; click a line → `player.seek(startMs)`; highlight the line that is playing (`timeupdate` event).
@@ -1248,6 +1425,135 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 - [ ] **Verify:** after delete, storage has no objects under the prefix; retry fixes a recording that failed because the API key was missing.
 - [ ] **Commit:** `feat(api): delete, retry and monthly usage limit`
 
+### Task 1.16 — Deploy for free (Oracle Cloud + Docker Compose + Caddy + DuckDNS)
+**Goal:** the app runs online over HTTPS for $0. HTTPS is not optional: browsers only allow the microphone on secure (HTTPS) pages.
+
+- [ ] **Files:** `docker-compose.prod.yml`, `Caddyfile`, `apps/api/Dockerfile`, `scripts/deploy.sh`
+
+**1. Create the free server**
+- [ ] Sign up at cloud.oracle.com (Always Free). Choose a home region carefully — it can't be changed later.
+- [ ] Compute → Instances → Create: image **Ubuntu 24.04 (aarch64)**, shape **VM.Standard.A1.Flex**, **2 OCPU / 12 GB** (Always Free limit), add your SSH key. If you get "out of capacity", try another availability domain or retry later.
+- [ ] In the VCN security list, add ingress rules for TCP **80** and **443**.
+- [ ] Oracle's Ubuntu image also blocks ports with iptables — open them on the VM:
+
+```bash
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+**2. Free domains**
+- [ ] At duckdns.org create a subdomain `<name>.duckdns.org` pointing to the VM's public IP.
+
+**3. Server software**
+- [ ] Install Docker Engine + Compose plugin and Node 22 + pnpm on the VM; `git clone` your repo.
+- [ ] All Docker images used here (Postgres/pgvector, Redis, Caddy, Node) must support **arm64** — check each image's tags if a container fails to start.
+
+**4. Same-origin API under `/api`**
+- [ ] Register all API routes with a prefix so web + API share one domain (no CORS, simple cookies): `app.register(routes, { prefix: "/api" })`. Better Auth is already under `/api/auth`. Build the web app with `VITE_API_URL=/api`.
+
+**5. Audio storage on Cloudflare R2**
+- [ ] In the Cloudflare dashboard enable **R2** (it may ask for a payment method as verification; you stay free up to 10 GB). Create a bucket `voice-notes-audio` and an **R2 API token** with *Object Read & Write* for that bucket only. Note your Account ID.
+- [ ] Production storage settings: `S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`, `S3_REGION=auto`, `S3_BUCKET=voice-notes-audio`, `S3_ACCESS_KEY` / `S3_SECRET_KEY` from the token.
+- [ ] Nothing else changes in the code: signed URLs for the audio player work directly on R2's S3 endpoint (note: R2 signed URLs work only on the `r2.cloudflarestorage.com` endpoint, not on a custom domain).
+- [ ] Optional: a second bucket `voice-notes-backups` for the database backups below.
+
+**6. Production files**
+
+- [ ] `apps/api` needs a `build` script (`tsc -p .` → `dist/`) and the image keeps dev dependencies (the `knex` and `auth:migrate` scripts use tsx). The `.env` file is not copied into the image: Compose passes the variables, so the missing `DOTENV_PATH` file is harmless.
+
+```dockerfile
+# apps/api/Dockerfile — one image for both API and worker
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile && pnpm turbo build --filter=@vn/api...
+CMD ["node", "apps/api/dist/server.js"]
+```
+
+```yaml
+# docker-compose.prod.yml — only Caddy is reachable from the internet
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: voice_notes
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    env_file: .env
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  worker:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ["node", "apps/api/dist/worker.js"]
+    env_file: .env
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./apps/web/dist:/srv/web:ro
+      - caddydata:/data
+    restart: unless-stopped
+
+volumes: { pgdata: {}, redisdata: {}, caddydata: {} }
+# audio files live in Cloudflare R2, not on this server
+```
+
+```
+# Caddyfile — automatic HTTPS certificates
+{$DOMAIN} {
+  encode gzip
+  handle /api/* {
+    reverse_proxy api:3000
+  }
+  handle {
+    root * /srv/web
+    try_files {path} /index.html
+    file_server
+  }
+}
+```
+
+- [ ] Production `.env` on the server: strong `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`; `DATABASE_URL=postgres://app:<pw>@postgres:5432/voice_notes`, `REDIS_URL=redis://redis:6379`, the R2 settings from step 5, `WEB_ORIGIN=https://<name>.duckdns.org`, `BETTER_AUTH_URL=https://<name>.duckdns.org`, `DOMAIN=<name>.duckdns.org`, `STT_PROVIDER=groq`, `NOTES_PROVIDER=groq`, `GROQ_API_KEY=...`. Never commit this file.
+
+**7. Deploy script**
+
+```bash
+# scripts/deploy.sh — run on the server
+set -e
+git pull
+pnpm install --frozen-lockfile
+VITE_API_URL=/api pnpm --filter web build
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api knex migrate:latest
+docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:migrate
+```
+
+- [ ] **Backups ($0):** a daily cron job runs `pg_dump` and copies the file off the server (for example to the `voice-notes-backups` R2 bucket). A backup on the same VM is not a backup.
+- [ ] **Verify:** open `https://<name>.duckdns.org` on your phone → sign up → record 1 minute → notes appear; the audio player works.
+- [ ] **Commit:** `chore: free production deployment with docker compose and caddy`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [ ] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [ ] Lesson mode produces concepts + review questions; memo mode produces ideas.
@@ -1256,18 +1562,53 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 - [ ] A recording **> 60 minutes** completes (map → reduce path is used).
 - [ ] Another user cannot open your recording by guessing the URL.
 - [ ] `pnpm turbo lint typecheck test` is green.
+- [ ] Everything above works with `STT_PROVIDER=groq` and `NOTES_PROVIDER=groq` — **total cost $0**.
+- [ ] The app is online at `https://<your-name>.duckdns.org` (Task 1.16) and recording works from your phone's browser.
 
 ---
 
-## 7. Later phases (overview — will be broken into tasks when you get there)
+## 8. Phase 1b — Switch to the paid stack (≈1–3 days)
 
-### Phase 2 — Quality and search (≈2 weeks)
+**Goal:** better quality and privacy for real recordings. Same code, same server — only the AI providers change. Do this when you want to record other people, hit Groq's limits, or want better notes.
+
+### Task 1b.1 — Accounts and spend limits
+- [ ] Create an OpenAI API account and an Anthropic (Claude) API account, add a payment method, create API keys.
+- [ ] Set a **monthly spend limit** in both consoles (for example $10 each) before using them.
+- [ ] Keep `MONTHLY_MINUTES_LIMIT` in `.env` (for example 1,200 = 20 hours ≈ $8/month).
+
+### Task 1b.2 — Switch providers
+- [ ] In the server `.env`: `STT_PROVIDER=openai`, `NOTES_PROVIDER=claude`, `OPENAI_API_KEY=...`, `ANTHROPIC_API_KEY=...`, `NOTES_MODEL=claude-haiku-4-5` (cheapest) — try a Sonnet model later if notes need more depth. Check current model names in the Claude docs.
+- [ ] `docker compose -f docker-compose.prod.yml up -d` (restarts API + worker with the new env). The key check in `ai/providers.ts` makes the worker fail fast if a key is missing.
+- [ ] Optional: keep free as a fallback in development by using a separate local `.env`.
+
+### Task 1b.3 — Compare free vs paid on the same recordings
+- [ ] Add a small script `scripts/compare-providers.ts` that runs the same 3–4 audio files through both stacks and writes the transcripts and notes side by side into `compare/<file>.md`.
+- [ ] Judge: transcript errors, missed action items, quality of proposals. Write the result in the README — it decides which stack each environment uses.
+
+### Task 1b.4 — Track cost per recording
+- [ ] Migration: add `stt_provider`, `notes_provider`, `input_tokens`, `output_tokens`, `cost_usd` to `recordings`.
+- [ ] STT cost = `duration_ms / 60000 × price_per_min`; notes cost from the token usage the API returns (`usage` in the Claude response). Prices live in one `pricing.ts` file so they are easy to update.
+- [ ] Show "This month: X minutes, $Y" on the recordings page.
+
+### Task 1b.5 — Privacy switch
+- [ ] When `STT_PROVIDER=groq` or `NOTES_PROVIDER=groq`, show a small "Free mode — test recordings only" badge on the Record page. It disappears automatically in the paid stack.
+
+### ✅ Phase 1b done when
+- [ ] The Phase 1 acceptance test passes again with `STT_PROVIDER=openai` and `NOTES_PROVIDER=claude`.
+- [ ] Cost per recording is visible and matches the provider dashboards within a few cents.
+- [ ] The comparison results (Task 1b.3) are written in the README.
+
+---
+
+## 9. Later phases (overview — will be broken into tasks when you get there)
+
+### Phase 2 — Quality, search and Ukrainian (≈2–3 weeks)
 - **Ukrainian support:** add `uk` / `auto` to `LanguageCode`, a language selector on the Record page, a per-user notes-language setting (needs storage, e.g. a `user_settings` table), and a `notesLanguage` parameter in prompts and `NotesGenerator`. Compare STT providers on Ukrainian samples first.
-- Speaker labels (diarization): switch/add an STT adapter that returns speakers; UI to rename "Speaker 1" → a real name (stored per recording).
+- Speaker labels (diarization): switch/add an STT adapter that returns speakers (candidate: OpenAI `gpt-4o-transcribe-diarize`); UI to rename "Speaker 1" → a real name (stored per recording).
 - Embeddings for transcript segments (fill the `embedding` column), HNSW index on pgvector.
-- Search page: full-text (`tsvector`) + semantic search combined.
+- Search page: full-text (`tsvector`) + semantic search combined (the search field is already in the Recordings design).
 - "Ask your recordings" chat: retrieve top segments → answer with links to `[recording, timestamp]`.
-- Action items page across all recordings (filter: open / done / owner).
+- Action items page across all recordings (filter: open / done / owner), plus the "Assign" button for items without an owner.
 
 ### Phase 3 — Desktop app, Electron (≈2 weeks)
 - Electron shell loading the web UI; same API and auth.
@@ -1279,7 +1620,7 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 - Record with `expo-audio`, saving to a local file first.
 - Background recording (iOS background audio mode, Android foreground service with a notification).
 - Offline upload queue: upload when the network returns; show "waiting to upload".
-- Same screens using the shared API client, schemas and `notesToMarkdown`.
+- Same screens using the shared API client, schemas and `notesToMarkdown`; the recording screen follows `docs/design/screens/PhoneRecording.dc.html` and the tokens in `docs/DESIGN.md`.
 
 ### Phase 5 — Live mode (≈2 weeks)
 - WebSocket from client → API → streaming STT provider; show the transcript live.
@@ -1291,39 +1632,47 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 - User setting **"Privacy mode: process locally"**; show which engine processed each recording.
 - Compare quality on the same samples you used to choose the cloud provider.
 
-### Phase 7 — Production hardening
-- Cost tracking per recording (minutes + LLM tokens), admin view.
-- Retention settings (auto-delete audio after N days, keep notes).
+### Phase 7 — Production hardening + SaaS business
+- **Billing:** subscription plans with monthly minute quotas (free plan with a small allowance, paid plans with more). `MONTHLY_MINUTES_LIMIT` becomes a per-plan value stored on the user. Choose a payment provider that supports your country as a seller — check this early, it can take weeks to set up.
+- **Legal pages:** Terms of Service, Privacy Policy, recording-consent rules for users, data deletion on request. Get basic legal advice before charging money (GDPR applies to EU customers).
+- **Unit economics:** track cost per user per month (Task 1b.4). At scale, compare cheaper paid speech-to-text (for example Groq's paid tier) against OpenAI — the adapter makes this a config change.
+- **Growth basics:** landing page, waitlist/sign-up analytics, onboarding email, feedback channel.
+- Admin view of costs; retention settings (auto-delete audio after N days, keep notes).
 - Encryption at rest, rate limits, Sentry error monitoring, structured logs.
 - Backups for Postgres and object storage.
 
 ---
 
-## 8. Risks and how we handle them
+## 10. Risks and how we handle them
 
 | Risk | Mitigation |
 |---|---|
 | **Consent / privacy** — recording other people | Clear recording indicator + reminder in UI. For lessons, get the school's and parents' permission before recording real classes. Easy full delete. |
-| Cloud costs grow | Monthly minutes limit from day one; small Opus files; cost tracking in Phase 7 |
+| Privacy on the free AI tier | Groq's free tier has no privacy guarantee: only your own test recordings. Real people only after switching to the paid stack (Phase 1b) |
+| Cloud costs grow | Free stack first; in the paid stage: monthly minutes limit, console spend limits, per-recording cost tracking (Task 1b.4) |
+| Free tiers change or disappear | Everything is behind adapters and env variables; the Oracle VM can be replaced by any $4–6/month VPS running the same `docker-compose.prod.yml` |
+| Oracle "out of capacity" when creating the VM | Retry at different times / availability domains; develop locally meanwhile |
+| Storage software (MinIO community edition archived in 2026) | Local dev uses RustFS, production uses managed Cloudflare R2; everything goes through the S3 API, so either can be replaced |
 | Transcription quality (English now, Ukrainian later) | Compare providers on real samples before choosing; adapter makes switching cheap |
-| AI invents facts in notes | Prompt rules + "only what was said" + openQuestions; user can edit everything |
+| AI invents facts in notes | Prompt rules + "only what was said" + openQuestions; suggestions are visibly separated in the UI; user can edit everything |
 | Safari / iOS audio quirks | Test Safari in Phase 1; Phase 4 uses native recording on mobile |
 | System audio capture on desktop | Spike first in Phase 3 before committing to the design |
 | Scope (3 platforms, one developer) | Phases 0–2 are a complete portfolio project; everything after is a bonus |
 
 ---
 
-## 9. Timeline at a glance
+## 11. Timeline at a glance
 
 | Phase | Estimate | Result |
 |---|---|---|
-| 0 Foundations | ~1 week | Monorepo, infra, auth, CI |
-| 1 Web MVP | 2–3 weeks | Record → transcript → notes & proposals → edit/export |
-| 2 Quality & search | ~2 weeks | Speakers, search, Q&A over recordings |
+| 0 Foundations | ~1 week | Monorepo, infra, auth, CI (+ catch-up Task 0.9) |
+| 1 Web MVP (free stack) | ~3 weeks | Record → transcript → notes & proposals → edit/export, online for $0 |
+| 1b Paid stack | 1–3 days | OpenAI speech-to-text + Claude notes, cost tracking, quality comparison |
+| 2 Quality, search & Ukrainian | 2–3 weeks | Speakers, search, Q&A over recordings, Ukrainian support |
 | 3 Desktop | ~2 weeks | Electron app with call recording |
 | 4 Mobile | 2–3 weeks | Expo app with offline recording |
 | 5 Live mode | ~2 weeks | Real-time transcript |
 | 6 Local processing | 2–3 weeks | Private/offline mode |
-| 7 Hardening | ongoing | Ready for real users |
+| 7 Hardening + SaaS | ongoing | Billing, legal, ready for real users |
 
 Estimates assume part-time work alongside a job; adjust after Phase 0 based on your real speed.

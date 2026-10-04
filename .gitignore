@@ -7,3 +7,10 @@ coverage/
 !.env.example
 .DS_Store
 *.log
+
+# audio recordings: never commit (they live in S3/R2)
+*.webm
+*.ogg
+*.m4a
+*.mp3
+*.wav
