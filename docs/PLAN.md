@@ -506,7 +506,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 - [x] **Commit:** `feat(web): vite react skeleton with auth pages`
 
 ### Task 0.8 — CI
-- [ ] **Files:** `.github/workflows/ci.yml`
+- [x] **Files:** `.github/workflows/ci.yml`
 
 ```yaml
 name: CI
