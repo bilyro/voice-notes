@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { authClient } from "../lib/auth-client";
+import { Button } from "../components/Button";
+import { AuthLayout } from "./AuthLayout";
+import styles from "./Auth.module.css";
 
 export function SignUpPage() {
   const navigate = useNavigate();
@@ -25,16 +28,24 @@ export function SignUpPage() {
   }
 
   return (
-    <main className="auth">
-      <h1>Create account</h1>
-      <form onSubmit={onSubmit}>
-        <label>Name <input name="name" autoComplete="name" required /></label>
-        <label>Email <input name="email" type="email" autoComplete="email" required /></label>
-        <label>Password <input name="password" type="password" autoComplete="new-password" minLength={8} required /></label>
-        {error && <p className="error" role="alert">{error}</p>}
-        <button disabled={pending}>{pending ? "Creating…" : "Sign up"}</button>
+    <AuthLayout title="Create account">
+      <form className={styles.form} onSubmit={onSubmit}>
+        <label className={styles.field}>
+          Name
+          <input className={styles.input} name="name" autoComplete="name" required />
+        </label>
+        <label className={styles.field}>
+          Email
+          <input className={styles.input} name="email" type="email" autoComplete="email" required />
+        </label>
+        <label className={styles.field}>
+          Password
+          <input className={styles.input} name="password" type="password" autoComplete="new-password" minLength={8} required />
+        </label>
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        <Button type="submit" block disabled={pending}>{pending ? "Creating account…" : "Create account"}</Button>
       </form>
-      <p>Have an account? <Link to="/login">Sign in</Link></p>
-    </main>
+      <p className={styles.switch}>Have an account? <Link to="/login">Sign in</Link></p>
+    </AuthLayout>
   );
 }

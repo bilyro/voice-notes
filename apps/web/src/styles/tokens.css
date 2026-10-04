@@ -1,0 +1,31 @@
+/* Design tokens, copied from docs/DESIGN.md section 2. Use only these values. */
+:root {
+  /* color */
+  --color-bg: #FFFFFF;              /* page */
+  --color-surface: #F6F7F8;         /* player, info notes, suggestion box, search field, icon tiles */
+  --color-surface-selected: #EEF0F2;/* active sidebar item */
+  --color-line: #E6E8EB;            /* borders, dividers, inactive pills */
+  --color-track: #DDE0E4;           /* player track */
+  --color-wave-past: #C9CDD2;       /* waveform history bars */
+  --color-ink: #1C2026;             /* text, primary buttons, progress fill */
+  --color-ink-soft: #3E444C;        /* text inside info notes */
+  --color-ink-muted: #5F6670;       /* secondary text, meta, timestamps */
+  --color-record: #D92D20;          /* record button, live dot */
+  --color-record-soft: #FDECEA;     /* ring around record button, "Recording" badge */
+  --color-record-on-dark: #FF6B5E;  /* red dot inside the black "New recording" button */
+  --color-error: #B42318;           /* error text */
+
+  /* type */
+  --font-sans: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+
+  /* radius (by size of the element, not one value everywhere) */
+  --radius-sm: 6px;    /* small text buttons */
+  --radius-md: 8px;    /* buttons, inputs, sidebar items */
+  --radius-lg: 10px;   /* search field, info note, list icon tiles, transcript rows */
+  --radius-xl: 12px;   /* suggestion box */
+  --radius-pill: 999px;/* chips, filter pills, audio player */
+
+  /* spacing scale */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 40px; --space-8: 56px;
+}

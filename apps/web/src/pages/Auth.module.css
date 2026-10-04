@@ -1,0 +1,55 @@
+/* sign-in / sign-up: not in the mockups, so built from the spec (docs/DESIGN.md section 6) */
+.page {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--space-6);
+  font-size: 18px;
+  font-weight: 600;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-record);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-weight: 400;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.switch {
+  margin-top: var(--space-5);
+  font-size: 14px;
+}

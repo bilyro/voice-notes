@@ -41,6 +41,7 @@ pnpm install
 # 3. Environment
 cp .env.example .env
 #    then set BETTER_AUTH_SECRET in .env, e.g. to the output of: openssl rand -base64 32
+#    AI keys are optional to start the app; the free stack needs GROQ_API_KEY (console.groq.com)
 
 # 4. Postgres, Redis and S3 storage
 docker compose up -d
@@ -49,8 +50,7 @@ docker compose up -d
 pnpm --filter @vn/api knex migrate:latest
 pnpm --filter @vn/api auth:migrate
 
-# 6. Build the shared package once, then start API + web
-pnpm --filter @vn/shared build
+# 6. Start API + web (turbo builds @vn/shared first)
 pnpm dev
 ```
 
@@ -61,7 +61,7 @@ Then open http://localhost:5173 and create an account.
 | Service | URL | Notes |
 |---|---|---|
 | Web app | http://localhost:5173 | |
-| API | http://localhost:3000 | `GET /health` → `{"ok":true}` |
+| API | http://localhost:3000 | `GET /api/health` → `{"ok":true}` |
 | Postgres | `localhost:5433` | Port 5433, so it doesn't clash with a locally installed Postgres. User/password: `app`/`app` |
 | Redis | `localhost:6379` | |
 | S3 API | http://localhost:9000 | Bucket `recordings` |
@@ -96,9 +96,9 @@ docs/PLAN.md    Implementation plan, worked through task by task
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/health` | — | Health check |
+| `GET` | `/api/health` | — | Health check |
 | `GET, POST` | `/api/auth/*` | — | Better Auth (sign up, sign in, sign out, session) |
-| `GET` | `/me` | ✓ | Current user's id |
+| `GET` | `/api/me` | ✓ | Current user's id |
 
 ## CI
 

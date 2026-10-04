@@ -615,9 +615,9 @@ jobs:
 ### Task 0.9 — Catch-up: align Phase 0 with decisions made after it was built
 Phase 0 was built before these decisions: free stack first, closed SaaS, the approved design, and `@vn/shared` being imported by the apps. This task brings the existing code in line. One session; skip any item that is already true.
 
-- [ ] **Turbo:** in `turbo.json`, `dev` gets `"dependsOn": ["^build"]`, so `pnpm dev` on a fresh clone builds `@vn/shared` before the apps import it.
-- [ ] **Repo (closed SaaS):** the GitHub repo is **Private**. Add `LICENSE` with `Copyright (c) 2026 <your full name>. All rights reserved.` and the proprietary notice (no MIT). `.gitignore` ignores `.env` and `.env.*` but not `.env.example`. Run `git log --all --oneline -- .env`: it must print nothing. If a real key was ever committed, revoke it in the provider's console.
-- [ ] **`.env.example`:** **replace** the existing `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=` and `NOTES_MODEL=` lines with this block, so no key appears twice. It also makes Haiku the paid-stage default. Make the same change in your local `.env`.
+- [x] **Turbo:** in `turbo.json`, `dev` gets `"dependsOn": ["^build"]`, so `pnpm dev` on a fresh clone builds `@vn/shared` before the apps import it.
+- [x] **Repo (closed SaaS):** the GitHub repo is **Private**. Add `LICENSE` with `Copyright (c) 2026 <your full name>. All rights reserved.` and the proprietary notice (no MIT). `.gitignore` ignores `.env` and `.env.*` but not `.env.example`. Run `git log --all --oneline -- .env`: it must print nothing. If a real key was ever committed, revoke it in the provider's console.
+- [x] **`.env.example`:** **replace** the existing `OPENAI_API_KEY=`, `ANTHROPIC_API_KEY=` and `NOTES_MODEL=` lines with this block, so no key appears twice. It also makes Haiku the paid-stage default. Make the same change in your local `.env`.
 
 ```bash
 # --- AI providers: FREE stack by default (Stage 1) ---
@@ -632,7 +632,7 @@ ANTHROPIC_API_KEY=
 NOTES_MODEL=claude-haiku-4-5
 ```
 
-- [ ] **`config.ts`:** add these fields to `Env` and export the Groq URL. Do **not** require any AI key here: the API server must start without them (the worker checks keys in Task 1.6).
+- [x] **`config.ts`:** add these fields to `Env` and export the Groq URL. Do **not** require any AI key here: the API server must start without them (the worker checks keys in Task 1.6).
 
 ```ts
   STT_PROVIDER: z.enum(["groq", "openai"]).default("groq"),
@@ -647,7 +647,7 @@ NOTES_MODEL=claude-haiku-4-5
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";   // Groq is OpenAI-compatible
 ```
 
-- [ ] **All API routes under `/api`** (decided for the free deploy, Task 1.16; done now so dev and production use the same paths and Phase 1 routes are written under it from the start):
+- [x] **All API routes under `/api`** (decided for the free deploy, Task 1.16; done now so dev and production use the same paths and Phase 1 routes are written under it from the start):
   - `server.ts`: register app routes inside `app.register(async (api) => { ... }, { prefix: "/api" })`, so `/health` → `/api/health` and `/me` → `/api/me`. Keep `registerAuthRoutes(app)` **outside** that plugin: its route is already `/api/auth/*`, and inside it would become `/api/api/auth/*`.
   - `apps/web/src/lib/api.ts`: default `BASE` becomes `"http://localhost:3000/api"`; production builds set `VITE_API_URL=/api`.
   - `apps/web/src/lib/auth-client.ts`: **don't** pass `VITE_API_URL` to Better Auth. It appends `/api/auth` itself and rejects relative URLs like `/api` ("Invalid base URL"). Use the API origin in dev, and leave `baseURL` out in production, which makes it use `window.location.origin`:
@@ -659,9 +659,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-- [ ] **Design (Task 0.7 was built before the design existed):** read `docs/DESIGN.md`. Load Instrument Sans (400/500/600/700) in `apps/web/index.html`; create `src/styles/tokens.css` (DESIGN.md section 2) and `src/styles/base.css` (font, colors, `:focus-visible` outline); build `AppShell` + `Sidebar` like the reference screens (only Recordings and New recording visible for now); restyle sign-in / sign-up with the tokens (centered 400px column, h1, two inputs, black primary button).
-- [ ] **Verify:** with an `.env` that has **no AI keys**, `docker compose up -d && pnpm dev` starts API + web from a clean `packages/shared/dist`; `curl localhost:3000/api/health` → `{"ok":true}` and sign-up / sign-in still work; the web app shows the sidebar shell and an empty Recordings page; at phone width the sidebar stacks on top; Tab shows a visible focus outline; `pnpm turbo lint typecheck test` is green.
-- [ ] **Commit:** `chore: align phase 0 with current plan (turbo, license, config, design)`
+- [x] **Design (Task 0.7 was built before the design existed):** read `docs/DESIGN.md`. Load Instrument Sans (400/500/600/700) in `apps/web/index.html`; create `src/styles/tokens.css` (DESIGN.md section 2) and `src/styles/base.css` (font, colors, `:focus-visible` outline); build `AppShell` + `Sidebar` like the reference screens (only Recordings and New recording visible for now); restyle sign-in / sign-up with the tokens (centered 400px column, h1, two inputs, black primary button).
+- [x] **Verify:** with an `.env` that has **no AI keys**, `docker compose up -d && pnpm dev` starts API + web from a clean `packages/shared/dist`; `curl localhost:3000/api/health` → `{"ok":true}` and sign-up / sign-in still work; the web app shows the sidebar shell and an empty Recordings page; at phone width the sidebar stacks on top; Tab shows a visible focus outline; `pnpm turbo lint typecheck test` is green.
+- [x] **Commit:** `chore: align phase 0 with current plan (turbo, license, config, design)`
 
 ### ✅ Phase 0 done when
 - [ ] `docker compose up -d && pnpm dev` starts API + web

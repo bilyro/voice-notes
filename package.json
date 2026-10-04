@@ -1,6 +1,7 @@
 {
   "name": "voice-notes",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@12.9.1",
   "devEngines": {

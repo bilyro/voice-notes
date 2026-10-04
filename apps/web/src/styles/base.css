@@ -1,0 +1,73 @@
+/* Base element styles (docs/DESIGN.md sections 3–4). Uses only tokens.css values. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-ink);
+}
+a:hover {
+  color: var(--color-ink-muted);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 15px;
+  color: inherit;
+}
+
+/* every interactive element shows a visible focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--color-ink-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

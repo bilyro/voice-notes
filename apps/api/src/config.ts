@@ -13,10 +13,18 @@ const Env = z.object({
   WEB_ORIGIN: z.string(),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string(),
+  // AI keys are optional here: the API server must start without them (the worker checks them)
+  STT_PROVIDER: z.enum(["groq", "openai"]).default("groq"),
+  NOTES_PROVIDER: z.enum(["groq", "claude"]).default("groq"),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_NOTES_MODEL: z.string().default("openai/gpt-oss-120b"),
+  GROQ_NOTES_MAX_CHARS: z.coerce.number().default(16_000),
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  NOTES_MODEL: z.string().default("claude-sonnet-5-5"),
+  NOTES_MODEL: z.string().default("claude-haiku-4-5"),
   MONTHLY_MINUTES_LIMIT: z.coerce.number().default(600),
 });
 
 export const config = Env.parse(process.env); // crash early if env is wrong
+
+export const GROQ_BASE_URL = "https://api.groq.com/openai/v1"; // Groq is OpenAI-compatible

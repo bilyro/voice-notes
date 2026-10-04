@@ -1,0 +1,18 @@
+/* docs/DESIGN.md section 4: a wrapping flex row; on a phone the sidebar stacks on top */
+.shell {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 999 1 560px;
+  min-width: 0;
+}
+
+/* stacked (phone): rows take their natural height, so the sidebar doesn't stretch to fill the screen */
+@media (max-width: 799px) {
+  .shell {
+    align-content: flex-start;
+  }
+}
