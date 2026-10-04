@@ -187,7 +187,7 @@ packages:
 - [x] **Commit:** `chore: init monorepo with pnpm + turbo`
 
 ### Task 0.2 — Local infrastructure with Docker Compose
-- [ ] **Files:** `docker-compose.yml`, `.env.example`
+- [x] **Files:** `docker-compose.yml`, `.env.example`
 
 ```yaml
 # docker-compose.yml
@@ -245,8 +245,8 @@ NOTES_MODEL=claude-sonnet-5-5
 MONTHLY_MINUTES_LIMIT=600
 ```
 
-- [ ] **Verify:** `docker compose up -d` → MinIO console at `http://localhost:9001` shows bucket `recordings`; `psql $DATABASE_URL -c "select 1"` works.
-- [ ] **Commit:** `chore: add docker compose for postgres, redis, minio`
+- [x] **Verify:** `docker compose up -d` → MinIO console at `http://localhost:9001` shows bucket `recordings`; `psql $DATABASE_URL -c "select 1"` works.
+- [x] **Commit:** `chore: add docker compose for postgres, redis, minio`
 
 ### Task 0.3 — Shared package (schemas + types)
 - [ ] **Files:** `packages/shared/package.json`, `packages/shared/src/schemas/*.ts`, `packages/shared/src/index.ts`

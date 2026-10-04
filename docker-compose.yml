@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: voice_notes
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  # S3-compatible storage. MinIO stopped publishing Docker images, so we use RustFS
+  # (MinIO-compatible). Credentials match S3_ACCESS_KEY / S3_SECRET_KEY in .env.example.
+  s3:
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_ACCESS_KEY: minio
+      RUSTFS_SECRET_KEY: minio12345
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [s3data:/data]
+
+  createbucket:
+    image: amazon/aws-cli
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio12345
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "until aws --endpoint-url http://s3:9000 s3 ls >/dev/null 2>&1; do sleep 1; done &&
+      (aws --endpoint-url http://s3:9000 s3api head-bucket --bucket recordings 2>/dev/null ||
+      aws --endpoint-url http://s3:9000 s3 mb s3://recordings)"
+
+volumes:
+  pgdata:
+  s3data:
