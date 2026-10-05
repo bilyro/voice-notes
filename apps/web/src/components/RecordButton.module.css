@@ -1,0 +1,68 @@
+.button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* the only "shadow" in the app: the soft red ring around the record button */
+.circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: var(--color-record);
+  box-shadow: 0 0 0 10px var(--color-record-soft);
+}
+
+.icon {
+  background: var(--color-bg);
+}
+.start .icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.stop .icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+}
+
+.label {
+  font-weight: 600;
+}
+.start .label {
+  margin-top: var(--space-2);
+  font-size: 18px;
+}
+.stop .label {
+  font-size: 14px;
+}
+
+@media (max-width: 799px) {
+  .circle {
+    width: 84px;
+    height: 84px;
+    box-shadow: 0 0 0 8px var(--color-record-soft);
+  }
+  .start .icon {
+    width: 28px;
+    height: 28px;
+  }
+  .stop .icon {
+    width: 26px;
+    height: 26px;
+  }
+}

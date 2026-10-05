@@ -5,6 +5,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SignUpPage } from "./pages/SignUpPage";
 import { RecordingsPage } from "./pages/RecordingsPage";
 import { RecordPage } from "./pages/RecordPage";
+import { RecordingDetailPage } from "./pages/RecordingDetailPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <RecordingsPage /> },
           { path: "/record", element: <RecordPage /> },
+          { path: "/recordings/:id", element: <RecordingDetailPage /> },
         ],
       },
     ],

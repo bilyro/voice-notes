@@ -113,6 +113,13 @@ describe("recordings", () => {
     expect(list.json()).toEqual([]);
   });
 
+  it("tells the web app whether the free stack is on", async () => {
+    expect((await app.inject({ method: "GET", url: "/api/app-config" })).statusCode).toBe(401);
+    const cookie = await signUp();
+    const res = await app.inject({ method: "GET", url: "/api/app-config", headers: { cookie } });
+    expect(res.json()).toEqual({ freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq" });
+  });
+
   it("rejects missing sessions and bad input", async () => {
     const noAuth = await app.inject({ method: "GET", url: "/api/recordings" });
     expect(noAuth.statusCode).toBe(401);

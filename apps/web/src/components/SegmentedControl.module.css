@@ -1,0 +1,57 @@
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.track {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-1);
+  margin-top: 10px;
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+.segment:has(.radio:checked) {
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-line);   /* the 1px ring from the spec, not a shadow */
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.segment:has(.radio:focus-visible) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+/* the input stays in the page for keyboard and screen readers, but is invisible */
+.radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.hint {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}

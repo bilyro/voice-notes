@@ -49,6 +49,10 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
     async (api) => {
       api.get("/health", async () => ({ ok: true }));
       api.get("/me", { preHandler: requireUser }, async (req) => ({ userId: req.userId }));
+      // the web app can't read .env: it needs to know when the free (no privacy guarantee) stack is on
+      api.get("/app-config", { preHandler: requireUser }, async () => ({
+        freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq",
+      }));
       await recordingsController(api, recordings);
     },
     { prefix: "/api" },

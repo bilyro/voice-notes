@@ -1,0 +1,7 @@
+.note {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: 14px;
+}

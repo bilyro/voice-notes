@@ -1436,14 +1436,15 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 > Duration from `Date.now()` includes paused time — subtract pauses if you add a visible timer. Stretch goal: keep un-uploaded chunks in IndexedDB so a closed tab doesn't lose audio.
 
 ### Task 1.11 — Record page
-- [ ] **Files:** `apps/web/src/pages/RecordPage.tsx`, `components/SegmentedControl.tsx`, `components/RecordButton.tsx`, `components/InfoNote.tsx`, `apps/api/src/server.ts`
-- [ ] **Design:** before recording = `docs/design/screens/NewRecording.dc.html`; while recording = `docs/design/screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop).
-- [ ] **Steps:** segmented control Meeting / Lesson / Voice memo with the one-line hint of what the notes focus on, optional title, microphone select with input-level bar, no language selector (English only), Free plan info note (Task 1b.5 text, shown only when `freeMode` is true, see below), big red record button + consent reminder ("Tell everyone they are being recorded"). While recording: "Recording" badge, big timer, waveform, "Saved up to mm:ss", Pause and Stop and save buttons.
-- [ ] **Free mode flag:** the web app can't read the server's `.env`, so the API exposes it: `GET /api/app-config` (with `requireUser`) → `{ freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq" }`. The Record page loads it with `useQuery`.
-- [ ] Flow on **Record**: `POST /recordings` → create `ChunkUploader(id)` → `start()`.
-- [ ] Flow on **Stop**: `stop()` → `uploader.flush()` → `POST /recordings/:id/finish { chunkCount, durationMs }` → navigate to the detail page.
-- [ ] **Verify:** record → stop → redirected to detail page showing status `uploaded` → `transcribing`.
-- [ ] **Commit:** `feat(web): record page`
+- [x] **Files:** `apps/web/src/pages/RecordPage.tsx`, `components/SegmentedControl.tsx`, `components/RecordButton.tsx`, `components/InfoNote.tsx`, `apps/api/src/server.ts`
+- [x] **Design:** before recording = `docs/design/screens/NewRecording.dc.html`; while recording = `docs/design/screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop).
+- [x] **Steps:** segmented control Meeting / Lesson / Voice memo with the one-line hint of what the notes focus on, optional title, microphone select with input-level bar, no language selector (English only), Free plan info note (Task 1b.5 text, shown only when `freeMode` is true, see below), big red record button + consent reminder ("Tell everyone they are being recorded"). While recording: "Recording" badge, big timer, waveform, "Saved up to mm:ss", Pause and Stop and save buttons.
+- [x] **Free mode flag:** the web app can't read the server's `.env`, so the API exposes it: `GET /api/app-config` (with `requireUser`) → `{ freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq" }`. The Record page loads it with `useQuery`.
+- [x] Flow on **Record**: `POST /recordings` → create `ChunkUploader(id)` → `start()`.
+- [x] Flow on **Stop**: `stop()` → `uploader.flush()` → `POST /recordings/:id/finish { chunkCount, durationMs }` → navigate to the detail page.
+- [x] **As built:** the Free plan note uses the mockup's text ("Free plan: recordings are processed by a free service with no privacy guarantee. Record only your own voice for testing."). The recorder files from Task 1.10 grew what this page needs: `start(deviceId)`, the live `stream`, a pause-aware `elapsed()` (also used for `durationMs`), and `ChunkUploader(id, onUploaded)` with an `uploaded` count ("Saved up to") and `retryFailed()` for **Try again**. `recorder/use-audio-level.ts` feeds the input meter and the waveform. Because the detail page is Task 1.13, `/recordings/:id` is a placeholder (`RecordingDetailPage.tsx`: title + live status) that 1.13 replaces. On a phone the stacked sidebar pushes Pause / Stop below the fold; the phone mockup has no sidebar.
+- [x] **Verify:** record → stop → redirected to detail page showing status `uploaded` → `transcribing`.
+- [x] **Commit:** `feat(web): record page`
 
 ### Task 1.12 — Recordings list with live status
 - [ ] **Files:** `apps/web/src/pages/RecordingsPage.tsx`
