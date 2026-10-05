@@ -1,0 +1,18 @@
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  line-height: 1.9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.link:hover {
+  color: var(--color-ink);
+}
+.current {
+  color: var(--color-ink);
+  font-weight: 600;
+}

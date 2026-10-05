@@ -1,0 +1,26 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+.row[aria-current="true"] {
+  background: var(--color-surface);
+}
+.speaker {
+  font-size: 14px;
+  font-weight: 600;
+}
+.text {
+  margin-top: 2px;
+}

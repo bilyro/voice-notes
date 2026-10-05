@@ -154,6 +154,21 @@ describe("recordings", () => {
     const detail = (await app.inject({ method: "GET", url: `/api/recordings/${id}`, headers: { cookie } })).json();
     expect(detail.notes).toMatchObject({ version: 2, editedByUser: true, content: { title: "Sync" } });
 
+    // action_items follow the saved notes, including the done flag
+    const withItems = { ...notes, actionItems: [
+      { text: "Send the agenda", owner: "Marta", dueDate: "Friday", done: true },
+      { text: "Book the room", owner: null, dueDate: null },
+    ] };
+    const v3 = await app.inject({ method: "PUT", url: `/api/recordings/${id}/notes`, headers: { cookie }, payload: withItems });
+    expect(v3.json()).toEqual({ version: 3 });
+    const items = await db("action_items").where({ recording_id: id }).orderBy("id").select("text", "owner", "due_date", "done");
+    expect(items).toEqual([
+      { text: "Send the agenda", owner: "Marta", due_date: "Friday", done: true },
+      { text: "Book the room", owner: null, due_date: null, done: false },
+    ]);
+    const latest = (await app.inject({ method: "GET", url: `/api/recordings/${id}`, headers: { cookie } })).json();
+    expect(latest.notes.content.actionItems[1]).toEqual({ text: "Book the room", owner: null, dueDate: null, done: false });
+
     const del = await app.inject({ method: "DELETE", url: `/api/recordings/${id}`, headers: { cookie } });
     expect(del.statusCode).toBe(204);
     await expect(storage.getStream(keys.chunk(id, 0))).rejects.toThrow();

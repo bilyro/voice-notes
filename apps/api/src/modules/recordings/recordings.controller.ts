@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { CreateRecordingInput, Notes } from "@vn/shared";
+import { CreateRecordingInput, SavedNotes } from "@vn/shared";
 import { requireUser } from "../../plugins/require-user.js";
 import { RecordingsService } from "./recordings.service.js";
 
@@ -48,7 +48,7 @@ export async function recordingsController(app: FastifyInstance, service: Record
 
   app.put("/recordings/:id/notes", { preHandler: requireUser }, async (req) => {
     const { id } = IdParams.parse(req.params);
-    const version = await service.saveNotes(req.userId, id, Notes.parse(req.body));
+    const version = await service.saveNotes(req.userId, id, SavedNotes.parse(req.body));
     return { version };
   });
 

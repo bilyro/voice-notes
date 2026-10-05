@@ -126,11 +126,11 @@ export class RecordingsRepository {
   }
 
   /** Delete + insert, so a retried notes job never leaves duplicates. */
-  async replaceActionItems(recordingId: string, userId: string, items: Notes["actionItems"]) {
+  async replaceActionItems(recordingId: string, userId: string, items: (Notes["actionItems"][number] & { done?: boolean })[]) {
     await this.db("action_items").where({ recording_id: recordingId }).delete();
     if (items.length) {
       await this.db("action_items").insert(
-        items.map((a) => ({ recording_id: recordingId, user_id: userId, text: a.text, owner: a.owner, due_date: a.dueDate })),
+        items.map((a) => ({ recording_id: recordingId, user_id: userId, text: a.text, owner: a.owner, due_date: a.dueDate, done: a.done ?? false })),
       );
     }
   }

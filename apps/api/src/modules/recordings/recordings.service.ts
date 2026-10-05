@@ -1,4 +1,4 @@
-import type { CreateRecordingInput, Notes } from "@vn/shared";
+import type { CreateRecordingInput, SavedNotes } from "@vn/shared";
 import { httpError } from "../../lib/http-error.js";
 import { keys, storage } from "../../storage/storage.service.js";
 import { type RecordingsRepository, toRecording } from "./recordings.repository.js";
@@ -50,9 +50,14 @@ export class RecordingsService {
     return storage.signedUrl(rec.audio_key);
   }
 
-  async saveNotes(userId: string, id: string, content: Notes) {
+  /** A person's edit: a new notes version, and action_items follow it (like the notes job does). */
+  async saveNotes(userId: string, id: string, content: SavedNotes) {
     await this.repo.getOwned(userId, id);
-    return this.repo.saveNotesVersion(id, content, true);
+    return this.repo.transaction(async (trx) => {
+      const version = await trx.saveNotesVersion(id, content, true);
+      await trx.replaceActionItems(id, userId, content.actionItems);
+      return version;
+    });
   }
 
   // basic version; Task 1.15 removes the old failed job first, otherwise BullMQ ignores add() with the same id

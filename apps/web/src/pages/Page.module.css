@@ -17,3 +17,6 @@
   gap: var(--space-4);
   margin-top: var(--space-6);
 }
+.detail {
+  max-width: 760px;
+}

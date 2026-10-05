@@ -20,3 +20,9 @@ export const Notes = z.object({
   ideas: z.array(z.string()),
 });
 export type Notes = z.infer<typeof Notes>;
+
+/** An action item as a person saves it: the AI never sets `done`, people tick it off. */
+export const SavedActionItem = ActionItem.extend({ done: z.boolean().default(false) });
+/** Notes saved from the editor (PUT /recordings/:id/notes). AI notes have no `done`, so it defaults to false. */
+export const SavedNotes = Notes.extend({ actionItems: z.array(SavedActionItem) });
+export type SavedNotes = z.infer<typeof SavedNotes>;

@@ -1466,15 +1466,16 @@ const { data } = useQuery({
 - [x] **Commit:** `feat(web): recordings list with status polling`
 
 ### Task 1.13 — Recording detail page
-- [ ] **Files:** `RecordingDetailPage.tsx`, `components/AudioPlayer.tsx`, `components/Tabs.tsx`, `components/Transcript.tsx`, `components/NotesEditor.tsx`, `components/TimestampLink.tsx`
-- [ ] **Design:** `docs/design/screens/RecordingDetail.dc.html`: title + meta chips, action buttons, capsule audio player, then **Notes / Transcript tabs**. Notes order: summary, action items, decisions, suggested next steps (= `proposals`, grey box with the assistant label), open questions, AI disclaimer line. Lesson / memo extra sections and key points use the Decisions style.
-- [ ] **Steps:**
-  - [ ] `AudioPlayer`: gets a signed URL from `GET /recordings/:id/audio`, exposes `seek(ms)` via a ref.
-  - [ ] `Transcript`: list of segments with timestamps; click a line → `player.seek(startMs)`; highlight the line that is playing (`timeupdate` event).
-  - [ ] `NotesEditor`: sections Summary, Key points, Decisions, Action items (checkboxes), Proposals, Open questions (+ Concepts / Review questions for lessons, Ideas for memos). Inline editing, **Save** → `PUT /recordings/:id/notes`. The API also replaces `action_items` from the saved notes, the same way the notes job does, so edits show up in the Phase 2 action-items page.
-  - [ ] Processing state: show a progress step (Uploaded → Transcribing → Writing notes → Ready).
-- [ ] **Verify:** clicking a transcript line jumps the audio to that moment; edits survive a page reload.
-- [ ] **Commit:** `feat(web): recording detail with player, transcript and notes editor`
+- [x] **Files:** `RecordingDetailPage.tsx`, `components/AudioPlayer.tsx`, `components/Tabs.tsx`, `components/Transcript.tsx`, `components/NotesEditor.tsx`, `components/TimestampLink.tsx`
+- [x] **Design:** `docs/design/screens/RecordingDetail.dc.html`: title + meta chips, action buttons, capsule audio player, then **Notes / Transcript tabs**. Notes order: summary, action items, decisions, suggested next steps (= `proposals`, grey box with the assistant label), open questions, AI disclaimer line. Lesson / memo extra sections and key points use the Decisions style.
+- [x] **Steps:**
+  - [x] `AudioPlayer`: gets a signed URL from `GET /recordings/:id/audio`, exposes `seek(ms)` via a ref.
+  - [x] `Transcript`: list of segments with timestamps; click a line → `player.seek(startMs)`; highlight the line that is playing (`timeupdate` event).
+  - [x] `NotesEditor`: sections Summary, Key points, Decisions, Action items (checkboxes), Proposals, Open questions (+ Concepts / Review questions for lessons, Ideas for memos). Inline editing, **Save** → `PUT /recordings/:id/notes`. The API also replaces `action_items` from the saved notes, the same way the notes job does, so edits show up in the Phase 2 action-items page.
+  - [x] Processing state: show a progress step (Uploaded → Transcribing → Writing notes → Ready).
+- [x] **As built:** action-item checkboxes are saved: `@vn/shared` has `SavedNotes` (= `Notes` with `done` per action item, default false), used only for notes a person saves, so the AI's strict `Notes` schema is unchanged. Ticking a box saves a new notes version at once; `PUT /notes` saves the version and replaces `action_items` (with `done`) in one transaction. **Edit notes** sits in the action-button row (Copy / Download come in Task 1.14, More actions in 1.15); editing uses one-per-line text areas, and rows for action items and concepts. `TimestampLink` is used in the transcript only: `decisions` / `openQuestions` are plain strings without times, so linking them back (as in the mockup) needs a schema + prompt change later. Not built: transcript search field (mockup), speaker count in the header (no diarization yet). `failureText` moved to `lib/status.ts` (shared with `StatusLabel`).
+- [x] **Verify:** clicking a transcript line jumps the audio to that moment; edits survive a page reload.
+- [x] **Commit:** `feat(web): recording detail with player, transcript and notes editor`
 
 ### Task 1.14 — Markdown export
 - [ ] **Files:** `packages/shared/src/notes-to-markdown.ts` (shared so desktop/mobile reuse it)

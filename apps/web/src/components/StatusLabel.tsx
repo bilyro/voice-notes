@@ -1,4 +1,5 @@
 import type { Recording } from "@vn/shared";
+import { failureText } from "../lib/status";
 import { Button } from "./Button";
 import { ProgressBar } from "./ProgressBar";
 import styles from "./StatusLabel.module.css";
@@ -10,11 +11,6 @@ const STEPS: Partial<Record<Recording["status"], { label: string; progress: numb
   summarizing: { label: "Writing notes", progress: 0.7 },
 };
 
-/** Stored errors are for us; people see what happened in plain words. */
-function failureText(error: string | null) {
-  if (error === "No speech detected") return "No speech found in the audio";
-  return "Processing failed";
-}
 
 type Props = { recording: Pick<Recording, "status" | "error">; onRetry?: () => void; retrying?: boolean };
 
