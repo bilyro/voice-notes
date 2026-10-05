@@ -1023,7 +1023,7 @@ export class FakeStt implements SpeechToText {
 > Why `whisper-1` for the paid stage and not the cheaper gpt-4o transcribe models: those return only text/JSON without segment timestamps, and the app needs timestamps. File size limit: both Groq (free tier) and OpenAI accept files up to 25 MB. At 24 kbps Opus that is ~2 hours. For longer recordings, split with ffmpeg (`-f segment -segment_time 1800`) and offset the timestamps.
 
 ### Task 1.6 — Transcribe job
-- [ ] **Files:** `apps/api/src/jobs/transcribe.job.ts`, `apps/api/src/ai/providers.ts`
+- [x] **Files:** `apps/api/src/jobs/transcribe.job.ts`, `apps/api/src/ai/providers.ts`
 
 ```ts
 // apps/api/src/ai/providers.ts — the ONLY place that picks adapters
@@ -1079,7 +1079,7 @@ export async function transcribeJob(recordingId: string) {
 }
 ```
 
-- [ ] **Tests never import the real `ai/providers.ts`:** it throws without AI keys, and CI has none. Mock it in every job test (an async factory, because `vi.mock` is hoisted above the imports):
+- [x] **Tests never import the real `ai/providers.ts`:** it throws without AI keys, and CI has none. Mock it in every job test (an async factory, because `vi.mock` is hoisted above the imports):
 
 ```ts
 vi.mock("../ai/providers.js", async () => ({
@@ -1088,8 +1088,8 @@ vi.mock("../ai/providers.js", async () => ({
 }));
 ```
 
-- [ ] **Verify:** integration test with `FakeStt` (mocked as above) → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry. Starting the worker without `GROQ_API_KEY` fails with a clear message; the API server still starts.
-- [ ] **Commit:** `feat(api): transcribe job`
+- [x] **Verify:** integration test with `FakeStt` (mocked as above) → after the job, 2 segments in DB and a `notes` job queued. `replaceSegments` makes the job safe to retry. Starting the worker without `GROQ_API_KEY` fails with a clear message; the API server still starts.
+- [x] **Commit:** `feat(api): transcribe job`
 
 ### Task 1.7 — Notes prompts per mode
 - [ ] **Files:** `apps/api/src/ai/notes/prompts.ts`

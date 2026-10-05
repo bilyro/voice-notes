@@ -81,6 +81,18 @@ export class RecordingsRepository {
     return rows.map((s) => ({ startMs: s.start_ms, endMs: s.end_ms, speaker: s.speaker, text: s.text }));
   }
 
+  /** Delete + insert in one transaction, so a retried transcribe job never leaves duplicates. */
+  replaceSegments(recordingId: string, segments: Segment[]) {
+    return this.db.transaction(async (trx) => {
+      await trx("transcript_segments").where({ recording_id: recordingId }).delete();
+      if (segments.length) {
+        await trx("transcript_segments").insert(
+          segments.map((s) => ({ recording_id: recordingId, start_ms: s.startMs, end_ms: s.endMs, speaker: s.speaker, text: s.text })),
+        );
+      }
+    });
+  }
+
   async countSegments(recordingId: string) {
     const row = await this.db("transcript_segments").where({ recording_id: recordingId }).count<{ n: string }>("id as n").first();
     return Number(row?.n ?? 0);
