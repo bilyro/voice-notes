@@ -675,8 +675,8 @@ export const authClient = createAuthClient({
 **Goal:** record in the browser → audio uploads in chunks → transcript → notes & proposals appear automatically → you can edit and export them. Everything runs on the free stack ($0) and goes online in Task 1.16.
 
 ### Task 1.0 — English-only language field
-- [ ] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/api/migrations/002_english_only.ts`
-- [ ] **Why:** we support English only for now (Section 1), but Task 0.3/0.5 built `uk | en | auto` with default `auto`. We keep the `language` field, so adding Ukrainian later is an enum change plus UI, but restrict it to `en`.
+- [x] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/api/migrations/002_english_only.ts`
+- [x] **Why:** we support English only for now (Section 1), but Task 0.3/0.5 built `uk | en | auto` with default `auto`. We keep the `language` field, so adding Ukrainian later is an enum change plus UI, but restrict it to `en`.
 
 ```ts
 // packages/shared/src/schemas/recording.ts (changes)
@@ -700,8 +700,8 @@ export async function down(knex: Knex) {
 }
 ```
 
-- [ ] **Verify:** `pnpm turbo typecheck` is green; `knex migrate:latest` then `\d recordings` shows `language ... default 'en'`; `migrate:rollback` + `migrate:latest` works.
-- [ ] **Commit:** `feat: restrict recording language to English for now`
+- [x] **Verify:** `pnpm turbo typecheck` is green; `knex migrate:latest` then `\d recordings` shows `language ... default 'en'`; `migrate:rollback` + `migrate:latest` works.
+- [x] **Commit:** `feat: restrict recording language to English for now`
 
 ### Task 1.1 — Storage service
 - [ ] **Files:** `apps/api/src/storage/storage.service.ts`

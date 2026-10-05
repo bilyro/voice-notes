@@ -4,12 +4,12 @@ export const RecordingMode = z.enum(["meeting", "lesson", "memo"]);
 export const RecordingStatus = z.enum([
   "recording", "uploaded", "transcribing", "summarizing", "ready", "failed",
 ]);
-export const LanguageCode = z.enum(["uk", "en", "auto"]);
+export const LanguageCode = z.enum(["en"]);           // add "uk" / "auto" in Phase 2
 
 export const CreateRecordingInput = z.object({
   title: z.string().min(1).max(200).optional(),
   mode: RecordingMode,
-  language: LanguageCode.default("auto"),
+  language: LanguageCode.default("en"),
   mimeType: z.string(),                     // e.g. "audio/webm;codecs=opus"
   source: z.enum(["web", "desktop", "mobile"]),
 });
@@ -28,3 +28,4 @@ export const Recording = z.object({
 export type Recording = z.infer<typeof Recording>;
 export type CreateRecordingInput = z.infer<typeof CreateRecordingInput>;
 export type RecordingMode = z.infer<typeof RecordingMode>;
+export type LanguageCode = z.infer<typeof LanguageCode>;
