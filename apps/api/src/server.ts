@@ -19,7 +19,8 @@ async function realQueues(app: FastifyInstance): Promise<Queues> {
 
 export async function buildServer(opts: { queues?: Queues } = {}) {
   const app = Fastify({ logger: true });
-  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true });
+  // dev only (production is same-origin behind Caddy); PUT/DELETE must be listed, the default is GET,HEAD,POST
+  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true, methods: ["GET", "HEAD", "POST", "PUT", "DELETE"] });
 
   // set before registering routes, so the /api plugin below inherits it
   app.setErrorHandler((err, _req, reply) => {

@@ -1337,7 +1337,7 @@ export async function notesJob(recordingId: string) {
 - [x] **Commit:** `feat(api): notes job saves notes and action items`
 
 ### Task 1.10 — Browser recorder hook + chunk uploader
-- [ ] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/chunk-uploader.ts`
+- [x] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/chunk-uploader.ts`
 
 ```ts
 // apps/web/src/recorder/chunk-uploader.ts
@@ -1429,8 +1429,9 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 }
 ```
 
-- [ ] **Verify:** record 35 s → 4 chunks uploaded (check the RustFS console). Turn Wi-Fi off for 15 s mid-recording → chunks still arrive after reconnect.
-- [ ] **Commit:** `feat(web): media recorder hook with ordered chunk uploads`
+- [x] **As built:** `ChunkUploader` takes only `recordingId` (the `mimeType` parameter was never used, and Task 1.11 calls `new ChunkUploader(id)`), and declares its field explicitly because the web tsconfig has `erasableSyntaxOnly` (no `constructor(private …)`). `server.ts` registers CORS with `methods: ["GET", "HEAD", "POST", "PUT", "DELETE"]`: `@fastify/cors` 11 allows only GET/HEAD/POST by default, so in dev (web :5173 → API :3000) the browser blocked every chunk `PUT` at the preflight. Production is same-origin behind Caddy.
+- [x] **Verify:** record 35 s → 4 chunks uploaded (check the RustFS console). Turn Wi-Fi off for 15 s mid-recording → chunks still arrive after reconnect.
+- [x] **Commit:** `feat(web): media recorder hook with ordered chunk uploads`
 
 > Duration from `Date.now()` includes paused time — subtract pauses if you add a visible timer. Stretch goal: keep un-uploaded chunks in IndexedDB so a closed tab doesn't lose audio.
 
