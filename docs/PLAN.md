@@ -1092,7 +1092,7 @@ vi.mock("../ai/providers.js", async () => ({
 - [x] **Commit:** `feat(api): transcribe job`
 
 ### Task 1.7 — Notes prompts per mode
-- [ ] **Files:** `apps/api/src/ai/notes/prompts.ts`
+- [x] **Files:** `apps/api/src/ai/notes/prompts.ts`
 
 ```ts
 // apps/api/src/ai/notes/prompts.ts
@@ -1117,7 +1117,7 @@ export const systemPrompt = (mode: RecordingMode) => `${base}\n\n${modeRules[mod
 // Phase 2 (Ukrainian): add a notesLanguage parameter back here and in NotesGenerator.generate
 ```
 
-- [ ] **Commit:** `feat(api): notes prompts per recording mode`
+- [x] **Commit:** `feat(api): notes prompts per recording mode`
 
 ### Task 1.8 — NotesGenerator: shared chunking + free (Groq) and paid (Claude) adapters
 - [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`, `queue/queues.ts` (notes retry settings, see the rate-limit note below)
