@@ -7,9 +7,10 @@ import { connection, queues } from "../queue/queues.js";
 import { keys, storage } from "../storage/storage.service.js";
 import { transcribeJob } from "./transcribe.job.js";
 
-// the real providers throw without AI keys (CI has none); Task 1.8 adds notesGenerator: FakeNotes here
+// the real providers throw without AI keys (CI has none)
 vi.mock("../ai/providers.js", async () => ({
   stt: new (await import("../ai/stt/fake-stt.js")).FakeStt(),
+  notesGenerator: new (await import("../ai/notes/fake-notes.js")).FakeNotes(),
 }));
 
 // integration test: needs Postgres, Redis, S3 (docker compose up -d) and ffmpeg

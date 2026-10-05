@@ -3,6 +3,9 @@ import OpenAI from "openai";
 import { config, GROQ_BASE_URL } from "../config.js";
 import { OpenAiCompatibleStt } from "./stt/openai-compatible-stt.js";
 import type { SpeechToText } from "./stt/speech-to-text.js";
+import { GroqNotes } from "./notes/groq-notes.js";
+import { ClaudeNotes } from "./notes/claude-notes.js";
+import type { NotesGenerator } from "./notes/notes-generator.js";
 
 // Only the worker imports this file: fail fast there if a selected provider has no API key.
 const keyFor = { groq: "GROQ_API_KEY", openai: "OPENAI_API_KEY", claude: "ANTHROPIC_API_KEY" } as const;
@@ -16,6 +19,7 @@ export const stt: SpeechToText =
     : new OpenAiCompatibleStt("groq-whisper-large-v3-turbo",
         new OpenAI({ apiKey: config.GROQ_API_KEY, baseURL: GROQ_BASE_URL }), "whisper-large-v3-turbo");
 
-// Task 1.8 adds `notesGenerator` here (GroqNotes / ClaudeNotes, picked by NOTES_PROVIDER)
+export const notesGenerator: NotesGenerator =
+  config.NOTES_PROVIDER === "claude" ? new ClaudeNotes() : new GroqNotes();
 
 // Phase 6: add WhisperCppStt / OllamaNotes here

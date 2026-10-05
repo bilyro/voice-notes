@@ -1120,9 +1120,9 @@ export const systemPrompt = (mode: RecordingMode) => `${base}\n\n${modeRules[mod
 - [x] **Commit:** `feat(api): notes prompts per recording mode`
 
 ### Task 1.8 — NotesGenerator: shared chunking + free (Groq) and paid (Claude) adapters
-- [ ] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`, `queue/queues.ts` (notes retry settings, see the rate-limit note below)
-- [ ] **Steps:** `pnpm --filter @vn/api add @anthropic-ai/sdk` (the `openai` package from Task 1.5 is reused for Groq)
-- [ ] Build `chunked-notes.ts` + `groq-notes.ts` **now**; `claude-notes.ts` can be written now but is only switched on in Phase 1b.
+- [x] **Files:** `ai/notes/notes-generator.ts`, `ai/notes/chunked-notes.ts`, `ai/notes/groq-notes.ts`, `ai/notes/claude-notes.ts`, `ai/notes/fake-notes.ts`, `queue/queues.ts` (notes retry settings, see the rate-limit note below)
+- [x] **Steps:** `pnpm --filter @vn/api add @anthropic-ai/sdk` (the `openai` package from Task 1.5 is reused for Groq)
+- [x] Build `chunked-notes.ts` + `groq-notes.ts` **now**; `claude-notes.ts` can be written now but is only switched on in Phase 1b.
 
 ```ts
 // apps/api/src/ai/notes/notes-generator.ts
@@ -1297,8 +1297,9 @@ export class ClaudeNotes extends ChunkedNotesGenerator {
 >
 > A retry runs the whole job again, including map calls that already succeeded. That's fine at $0, but it uses up daily quota. Check your real limits at console.groq.com (Settings → Limits) and tune `GROQ_NOTES_MAX_CHARS`.
 
-- [ ] **Verify:** unit tests: `splitByChars` (never cuts a line, no empty parts); `batchForMerge` (batches stay under `max` when possible, every batch but the last has ≥ 2 items); `generate` with a fake `callModel` on a long transcript ends with exactly one result. Manual script `try-notes.ts` with `NOTES_PROVIDER=groq` on a real English transcript (short and > 20 minutes) → valid `Notes` JSON ($0).
-- [ ] **Commit:** `feat(api): notes generators with shared chunking (groq free, claude paid)`
+- [x] **As built:** the long-transcript test failed with the code above: on the free tier (8k tokens/minute) `gpt-oss-120b`'s hidden reasoning counts as output, so the merge call ran out of tokens (`json_validate_failed` / `finish_reason: length`). `GroqNotes` now sends `reasoning_effort: "low"` (reasoning went from 400–1,500 to under 150 tokens per call) and `response_format: { type: "json_schema", json_schema: { name: "notes", strict: true, schema } }` instead of `json_object` + the schema in the prompt; `Notes.parse` stays as a runtime check. `MERGE_PROMPT` also asks for one title/summary for the whole recording and repeats the rules (max 5 proposals), because the first merge returned "Merged …" as the title and 15 proposals. `providers.ts` now exports `notesGenerator`, and `FakeNotes` returns a fixed `Notes` object. `try-notes.ts` takes a `.txt` transcript (one segment per line) or an audio file.
+- [x] **Verify:** unit tests: `splitByChars` (never cuts a line, no empty parts); `batchForMerge` (batches stay under `max` when possible, every batch but the last has ≥ 2 items); `generate` with a fake `callModel` on a long transcript ends with exactly one result. Manual script `try-notes.ts` with `NOTES_PROVIDER=groq` on a real English transcript (short and > 20 minutes) → valid `Notes` JSON ($0).
+- [x] **Commit:** `feat(api): notes generators with shared chunking (groq free, claude paid)`
 
 > Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you switch to Claude; the model is configurable via `NOTES_MODEL`.
 
