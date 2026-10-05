@@ -905,8 +905,8 @@ export const markFailed = (recordingId: string, error: string) =>
 - [x] **Commit:** `feat(api): bullmq queues and worker entrypoint`
 
 ### Task 1.4 — Audio preparation (join chunks + normalize)
-- [ ] **Files:** `apps/api/src/audio/prepare-audio.ts`
-- [ ] **Steps:** install ffmpeg on your machine / in the worker Docker image. Join chunks **in order**, then convert to mono 16 kHz Opus (small files, and whisper.cpp will need 16 kHz later anyway).
+- [x] **Files:** `apps/api/src/audio/prepare-audio.ts`
+- [x] **Steps:** install ffmpeg on your machine / in the worker Docker image. Join chunks **in order**, then convert to mono 16 kHz Opus (small files, and whisper.cpp will need 16 kHz later anyway).
 
 ```ts
 // apps/api/src/audio/prepare-audio.ts
@@ -946,8 +946,8 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
 }
 ```
 
-- [ ] **Verify:** test with 3 real chunks recorded in Chrome → `audio.ogg` plays fully in VLC, no gaps.
-- [ ] **Commit:** `feat(api): join and normalize audio with ffmpeg`
+- [x] **Verify:** test with 3 real chunks recorded in Chrome → `audio.ogg` plays fully in VLC, no gaps.
+- [x] **Commit:** `feat(api): join and normalize audio with ffmpeg`
 
 > ⚠️ Safari records `audio/mp4` instead of webm. Test concatenation there early; if fragments don't join cleanly, upload the whole recording as one chunk on stop for Safari only.
 
