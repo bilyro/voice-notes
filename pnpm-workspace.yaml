@@ -6,3 +6,5 @@ packages:
 # esbuild's postinstall is optional: its binary comes from a platform-specific package.
 allowBuilds:
   esbuild: false
+  # msgpackr-extract (via bullmq) is an optional native speed-up; msgpackr falls back to plain JS.
+  msgpackr-extract: false

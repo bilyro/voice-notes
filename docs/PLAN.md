@@ -849,8 +849,8 @@ export class RecordingsService {
 - [x] **Commit:** `feat(api): recordings endpoints with chunked upload`
 
 ### Task 1.3 — Queues and worker process
-- [ ] **Files:** `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/src/jobs/mark-failed.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add bullmq ioredis`, and add the script `"worker": "DOTENV_PATH=../../.env tsx watch src/worker.ts"`
+- [x] **Files:** `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/src/jobs/mark-failed.ts`
+- [x] **Steps:** `pnpm --filter @vn/api add bullmq ioredis`, and add the script `"worker": "DOTENV_PATH=../../.env tsx watch src/worker.ts"`
 
 > **Job ids:** BullMQ throws `Custom Id cannot contain :`, so use `transcribe-<id>` / `notes-<id>`. Also, `add()` with an id that **already exists** (including a kept failed job) is silently ignored. See retry in Task 1.15.
 
@@ -901,8 +901,8 @@ export const markFailed = (recordingId: string, error: string) =>
   repo.update(recordingId, { status: "failed", error });
 ```
 
-- [ ] **Verify:** `pnpm --filter @vn/api worker` starts; finishing a recording shows a job in Redis (`redis-cli keys 'bull:*'`).
-- [ ] **Commit:** `feat(api): bullmq queues and worker entrypoint`
+- [x] **Verify:** `pnpm --filter @vn/api worker` starts; finishing a recording shows a job in Redis (`redis-cli keys 'bull:*'`).
+- [x] **Commit:** `feat(api): bullmq queues and worker entrypoint`
 
 ### Task 1.4 — Audio preparation (join chunks + normalize)
 - [ ] **Files:** `apps/api/src/audio/prepare-audio.ts`

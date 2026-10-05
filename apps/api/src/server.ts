@@ -1,12 +1,21 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { z } from "zod";
 import { config } from "./config.js";
 import { registerAuthRoutes } from "./auth.js";
 import { requireUser } from "./plugins/require-user.js";
 import { repo } from "./modules/recordings/recordings.repository.js";
-import { RecordingsService, type JobQueue, type Queues } from "./modules/recordings/recordings.service.js";
+import { RecordingsService, type Queues } from "./modules/recordings/recordings.service.js";
 import { recordingsController } from "./modules/recordings/recordings.controller.js";
+
+async function realQueues(app: FastifyInstance): Promise<Queues> {
+  const { queues, connection } = await import("./queue/queues.js");
+  app.addHook("onClose", async () => {
+    await Promise.all([queues.transcribe.close(), queues.notes.close()]);
+    await connection.quit();
+  });
+  return queues;
+}
 
 export async function buildServer(opts: { queues?: Queues } = {}) {
   const app = Fastify({ logger: true });
@@ -30,11 +39,8 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
   // Better Auth's route is already /api/auth/*, so it stays outside the /api prefix
   registerAuthRoutes(app);
 
-  // placeholder until Task 1.3 adds the BullMQ queues and the worker
-  const logOnly: JobQueue = {
-    add: async (name, data, { jobId }) => app.log.info({ name, data, jobId }, "job not queued: queues arrive in Task 1.3"),
-  };
-  const queues = opts.queues ?? { transcribe: logOnly, notes: logOnly };
+  // tests pass fake queues; only the real server opens a Redis connection (lazy import)
+  const queues = opts.queues ?? (await realQueues(app));
   const recordings = new RecordingsService(repo, queues);
 
   // all app routes live under /api, the same in dev and production (Caddy routes /api/* here)
