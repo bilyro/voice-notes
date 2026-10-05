@@ -1,0 +1,16 @@
+# keep the image small and free of secrets: dependencies are installed inside the image for Linux/arm64
+**/node_modules
+**/dist
+**/.turbo
+.git
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# audio never goes into an image
+*.webm
+*.ogg
+*.m4a
+*.mp3
+*.wav

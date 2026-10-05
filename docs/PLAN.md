@@ -1518,7 +1518,7 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 ### Task 1.16 — Deploy for free (Oracle Cloud + Docker Compose + Caddy + DuckDNS)
 **Goal:** the app runs online over HTTPS for $0. HTTPS is not optional: browsers only allow the microphone on secure (HTTPS) pages.
 
-- [ ] **Files:** `docker-compose.prod.yml`, `Caddyfile`, `apps/api/Dockerfile`, `scripts/deploy.sh`
+- [x] **Files:** `docker-compose.prod.yml`, `Caddyfile`, `apps/api/Dockerfile`, `scripts/deploy.sh`
 
 **1. Create the free server**
 - [ ] Sign up at cloud.oracle.com (Always Free). Choose a home region carefully — it can't be changed later.
@@ -1537,10 +1537,10 @@ sudo netfilter-persistent save
 
 **3. Server software**
 - [ ] Install Docker Engine + Compose plugin and Node 22 + pnpm on the VM; `git clone` your repo.
-- [ ] All Docker images used here (Postgres/pgvector, Redis, Caddy, Node) must support **arm64** — check each image's tags if a container fails to start.
+- [x] All Docker images used here (Postgres/pgvector, Redis, Caddy, Node) must support **arm64** — check each image's tags if a container fails to start.
 
 **4. Same-origin API under `/api`**
-- [ ] Already done in Task 0.9: all routes are under `/api`, and the auth client uses the page's own origin in production. Web and API share one domain (no CORS, simple cookies). Build the web app with `VITE_API_URL=/api`.
+- [x] Already done in Task 0.9: all routes are under `/api`, and the auth client uses the page's own origin in production. Web and API share one domain (no CORS, simple cookies). Build the web app with `VITE_API_URL=/api`.
 
 **5. Audio storage on Cloudflare R2**
 - [ ] In the Cloudflare dashboard enable **R2** (it may ask for a payment method as verification; you stay free up to 10 GB). Create a bucket `voice-notes-audio` and an **R2 API token** with *Object Read & Write* for that bucket only. Note your Account ID.
@@ -1550,7 +1550,7 @@ sudo netfilter-persistent save
 
 **6. Production files**
 
-- [ ] `apps/api` already has a `build` script (`tsc -p tsconfig.json`). Because `rootDir` is `.` (Task 0.5), the output is `dist/src/server.js` and `dist/src/worker.js`, **not** `dist/server.js`. The image keeps dev dependencies (the `knex` and `auth:migrate` scripts use tsx). The `.env` file is not copied into the image: Compose passes the variables, so the missing `DOTENV_PATH` file is harmless.
+- [x] `apps/api` already has a `build` script (`tsc -p tsconfig.json`). Because `rootDir` is `.` (Task 0.5), the output is `dist/src/server.js` and `dist/src/worker.js`, **not** `dist/server.js`. The image keeps dev dependencies (the `knex` and `auth:migrate` scripts use tsx). The `.env` file is not copied into the image: Compose passes the variables, so the missing `DOTENV_PATH` file is harmless.
 
 ```dockerfile
 # apps/api/Dockerfile — one image for both API and worker
@@ -1640,9 +1640,16 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api knex mi
 docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:migrate
 ```
 
+- [x] **As built (rehearsed locally with the production compose on `https://localhost`, arm64):** fixes to the files above —
+  - `.dockerignore` (new): without it `COPY . .` copied the Mac's `node_modules` and the real `.env` with API keys into the image.
+  - Dockerfile: the comment after `CMD [...]` made Docker read it as shell form, so the API crash-looped (`[node,: not found`); the comment is on its own line now.
+  - `deploy.sh`: `VITE_API_URL=/api pnpm turbo build --filter=web` (plain `pnpm --filter web build` fails on a fresh clone: `@vn/shared` is not built yet). Migrations run **before** the new API starts (`build` → `up -d --wait postgres redis` → `run --rm api … migrate` → `up -d`): Better Auth checks the schema once at startup and kept answering "Database schema mismatch" after the tables were created. The prod Postgres got the same healthcheck as dev for `--wait`.
+  - `scripts/backup.sh` (new) dumps, gzips and copies to `BACKUP_BUCKET` with the aws-cli image; rehearsal: upload + restore into a fresh database worked. `.env.production.example` (new) lists every production variable.
+  - Found on the way: `prepareAudio` used `pipeline(..., { end: false })` per chunk, which piled listeners on the file (`MaxListenersExceededWarning` from 10 chunks); it now writes chunks with `drain` back-pressure, with a 15-chunk regression test.
+  - Rehearsal results: HTTPS + `/api` routing + SPA fallback + gzip through Caddy; secure session cookie; a 1-minute recording on a phone-sized viewport uploaded 7 chunks; real speech → notes in ~6 s; the player streamed the signed storage URL.
 - [ ] **Backups ($0):** a daily cron job runs `pg_dump` and copies the file off the server (for example to the `voice-notes-backups` R2 bucket). A backup on the same VM is not a backup.
 - [ ] **Verify:** open `https://<name>.duckdns.org` on your phone → sign up → record 1 minute → notes appear; the audio player works.
-- [ ] **Commit:** `chore: free production deployment with docker compose and caddy`
+- [x] **Commit:** `chore: free production deployment with docker compose and caddy`
 
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [ ] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.

@@ -1,0 +1,47 @@
+# docker-compose.prod.yml — only Caddy is reachable from the internet
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: voice_notes
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:                       # deploy.sh waits for this before running migrations
+      test: ["CMD-SHELL", "pg_isready -U app -d voice_notes"]
+      interval: 2s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    env_file: .env
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  worker:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ["node", "apps/api/dist/src/worker.js"]
+    env_file: .env
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./apps/web/dist:/srv/web:ro
+      - caddydata:/data
+    restart: unless-stopped
+
+volumes: { pgdata: {}, redisdata: {}, caddydata: {} }
+# audio files live in Cloudflare R2, not on this server

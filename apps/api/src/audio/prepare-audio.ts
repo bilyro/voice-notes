@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { createWriteStream } from "node:fs";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pipeline } from "node:stream/promises";
+import { finished } from "node:stream/promises";
 import { storage, keys } from "../storage/storage.service.js";
 
 function ffmpeg(args: string[]) {
@@ -22,12 +23,18 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
   const raw = join(dir, "raw");
   const out = join(dir, "audio.ogg");
 
+  // one write stream for all chunks, in order. (pipeline(..., { end: false }) per chunk left listeners
+  // on the file each time: MaxListenersExceededWarning from 10 chunks on, hundreds for a long recording)
   const file = createWriteStream(raw);
+  const done = finished(file);
+  done.catch(() => {});                        // a write error also rejects `done`, awaited below
   for (let i = 0; i < chunkCount; i++) {
-    await pipeline(await storage.getStream(keys.chunk(recordingId, i)), file, { end: false });
+    for await (const part of await storage.getStream(keys.chunk(recordingId, i))) {
+      if (!file.write(part)) await once(file, "drain");
+    }
   }
   file.end();
-  await new Promise((r) => file.on("finish", r));
+  await done;
 
   await ffmpeg(["-i", raw, "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "24k", out]);
   await storage.put(keys.audio(recordingId), await readFile(out), "audio/ogg");

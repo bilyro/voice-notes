@@ -2,7 +2,7 @@
 
 An app that **listens**, **saves what was said**, and turns it into **notes and proposals**: a summary, decisions, action items and suggestions.
 
-> **Status:** Phase 0 (foundations) is done. You can sign up and sign in to the web app, and the API, database and storage run locally. Recording and transcription arrive in Phase 1. See [docs/PLAN.md](docs/PLAN.md) for the full roadmap.
+> **Status:** Phase 1 (web MVP on the free stack) is built: record in the browser, automatic transcript and notes, editing, Markdown export. Deployment files are ready; going online is Task 1.16. See [docs/PLAN.md](docs/PLAN.md) for the full roadmap.
 
 ## How it works
 
@@ -99,6 +99,15 @@ docs/PLAN.md    Implementation plan, worked through task by task
 | `GET` | `/api/health` | — | Health check |
 | `GET, POST` | `/api/auth/*` | — | Better Auth (sign up, sign in, sign out, session) |
 | `GET` | `/api/me` | ✓ | Current user's id |
+
+## Deploy (free: Oracle Cloud + Caddy + DuckDNS + Cloudflare R2)
+
+Step by step in [docs/PLAN.md](docs/PLAN.md), Task 1.16. On the server, with `.env` made from [.env.production.example](.env.production.example):
+
+```bash
+./scripts/deploy.sh      # pull, build web + images, migrate, start; Caddy gets the HTTPS certificate
+./scripts/backup.sh      # Postgres dump → R2; run it daily from cron
+```
 
 ## CI
 
