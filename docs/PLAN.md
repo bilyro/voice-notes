@@ -704,8 +704,8 @@ export async function down(knex: Knex) {
 - [x] **Commit:** `feat: restrict recording language to English for now`
 
 ### Task 1.1 — Storage service
-- [ ] **Files:** `apps/api/src/storage/storage.service.ts`
-- [ ] **Steps:** `pnpm --filter @vn/api add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
+- [x] **Files:** `apps/api/src/storage/storage.service.ts`
+- [x] **Steps:** `pnpm --filter @vn/api add @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
 
 ```ts
 // apps/api/src/storage/storage.service.ts
@@ -752,7 +752,7 @@ export const keys = {
 };
 ```
 
-- [ ] **CI needs the services too.** This is the first test that talks to them, and CI has no Postgres, Redis or S3, so it would go red. Give Postgres a healthcheck in `docker-compose.yml`, so `--wait` waits until it accepts connections:
+- [x] **CI needs the services too.** This is the first test that talks to them, and CI has no Postgres, Redis or S3, so it would go red. Give Postgres a healthcheck in `docker-compose.yml`, so `--wait` waits until it accepts connections:
 
 ```yaml
   postgres:
@@ -772,8 +772,8 @@ export const keys = {
       - run: pnpm --filter @vn/api knex migrate:latest && pnpm --filter @vn/api auth:migrate
 ```
 
-- [ ] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local RustFS); CI is green with the new steps.
-- [ ] **Commit:** `feat(api): s3 storage service`
+- [x] **Verify:** a small Vitest integration test puts a buffer, reads it back, deletes the prefix (runs against local RustFS); CI is green with the new steps.
+- [x] **Commit:** `feat(api): s3 storage service`
 
 ### Task 1.2 — Recordings repository + service + controller
 - [ ] **Files:** `apps/api/src/modules/recordings/*`

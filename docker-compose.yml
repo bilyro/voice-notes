@@ -7,6 +7,10 @@ services:
       POSTGRES_DB: voice_notes
     ports: ["5433:5432"]   # 5433 on the host: avoids clashing with a locally installed Postgres
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d voice_notes"]
+      interval: 2s
+      retries: 30
 
   redis:
     image: redis:7

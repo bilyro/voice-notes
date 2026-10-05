@@ -9,4 +9,8 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env                     # config.ts needs the variables; no AI keys required
+      - run: docker compose up -d --wait postgres redis s3
+      - run: docker compose run --rm createbucket     # finishes once the bucket exists
+      - run: pnpm --filter @vn/api knex migrate:latest && pnpm --filter @vn/api auth:migrate
       - run: pnpm turbo lint typecheck test
