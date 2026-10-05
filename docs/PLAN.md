@@ -776,8 +776,8 @@ export const keys = {
 - [x] **Commit:** `feat(api): s3 storage service`
 
 ### Task 1.2 — Recordings repository + service + controller
-- [ ] **Files:** `apps/api/src/modules/recordings/*`
-- [ ] **Endpoints** (registered inside the `/api` prefix from Task 0.9, so `/recordings` is served at `/api/recordings`; all use `preHandler: requireUser` and check `recording.user_id === req.userId`):
+- [x] **Files:** `apps/api/src/modules/recordings/*`
+- [x] **Endpoints** (registered inside the `/api` prefix from Task 0.9, so `/recordings` is served at `/api/recordings`; all use `preHandler: requireUser` and check `recording.user_id === req.userId`):
 
 | Method | Path | Does |
 |---|---|---|
@@ -845,8 +845,8 @@ export class RecordingsService {
 }
 ```
 
-- [ ] **Verify:** Vitest tests with `app.inject()`: create → upload 2 chunks → finish → status is `uploaded`; another user gets 404 for the same id.
-- [ ] **Commit:** `feat(api): recordings endpoints with chunked upload`
+- [x] **Verify:** Vitest tests with `app.inject()`: create → upload 2 chunks → finish → status is `uploaded`; another user gets 404 for the same id.
+- [x] **Commit:** `feat(api): recordings endpoints with chunked upload`
 
 ### Task 1.3 — Queues and worker process
 - [ ] **Files:** `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/src/jobs/mark-failed.ts`
