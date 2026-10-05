@@ -11,6 +11,7 @@ import type { JobQueue } from "./recordings.service.js";
 const jobs: { name: string; recordingId: string; jobId: string }[] = [];
 const fakeQueue: JobQueue = {
   add: async (name, data, { jobId }) => jobs.push({ name, recordingId: data.recordingId, jobId }),
+  getJob: async () => undefined,
 };
 
 let app: FastifyInstance;

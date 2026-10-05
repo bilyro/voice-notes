@@ -151,8 +151,11 @@ export function RecordPage() {
         body: JSON.stringify({ chunkCount: uploader.count, durationMs: Math.round(durationRef.current) }),
       });
       navigate(`/recordings/${id}`, { replace: true });
-    } catch {
-      setError("The recording could not be saved. Check your connection, then try again.");
+    } catch (e) {
+      // fetch throws TypeError when the network is down; otherwise the API said why (e.g. the monthly limit)
+      setError(e instanceof TypeError || !(e instanceof Error)
+        ? "The recording could not be saved. Check your connection, then try again."
+        : e.message);
     }
   }
 

@@ -22,7 +22,7 @@ vi.mock("../ai/providers.js", async () => ({
 let app: FastifyInstance;
 const emails: string[] = [];
 const ids: string[] = [];
-const noQueue: JobQueue = { add: async () => undefined };   // the test runs the jobs itself
+const noQueue: JobQueue = { add: async () => undefined, getJob: async () => undefined };   // the test runs the jobs itself
 
 async function signUp() {
   const email = `test-${randomUUID()}@example.com`;

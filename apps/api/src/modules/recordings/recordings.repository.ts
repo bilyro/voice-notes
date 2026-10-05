@@ -93,6 +93,16 @@ export class RecordingsRepository {
     });
   }
 
+  /** Total recorded time of this user's recordings created this calendar month (database time zone). */
+  async durationThisMonth(userId: string) {
+    const row = await this.db("recordings")
+      .where({ user_id: userId })
+      .where("created_at", ">=", this.db.raw("date_trunc('month', now())"))
+      .sum<{ ms: string | null }>("duration_ms as ms")
+      .first();
+    return Number(row?.ms ?? 0);
+  }
+
   async countSegments(recordingId: string) {
     const row = await this.db("transcript_segments").where({ recording_id: recordingId }).count<{ n: string }>("id as n").first();
     return Number(row?.n ?? 0);

@@ -1,11 +1,13 @@
 import type { CreateRecordingInput, SavedNotes } from "@vn/shared";
+import { config } from "../../config.js";
 import { httpError } from "../../lib/http-error.js";
 import { keys, storage } from "../../storage/storage.service.js";
 import { type RecordingsRepository, toRecording } from "./recordings.repository.js";
 
-/** The part of a BullMQ Queue the service uses, so tests can pass a fake. Real queues arrive in Task 1.3. */
+/** The part of a BullMQ Queue the service uses, so tests can pass a fake. */
 export type JobQueue = {
   add(name: string, data: { recordingId: string }, opts: { jobId: string }): Promise<unknown>;
+  getJob(jobId: string): Promise<{ remove(): Promise<unknown> } | undefined | null>;
 };
 export type Queues = { transcribe: JobQueue; notes: JobQueue };
 
@@ -60,17 +62,19 @@ export class RecordingsService {
     });
   }
 
-  // basic version; Task 1.15 removes the old failed job first, otherwise BullMQ ignores add() with the same id
+  /** Runs the pipeline again from the step that failed: no transcript yet → transcribe, otherwise → notes. */
   async retry(userId: string, id: string) {
     const rec = await this.repo.getOwned(userId, id);
     if (rec.status !== "failed") throw httpError(409, "Only a failed recording can be retried");
-    if ((await this.repo.countSegments(id)) === 0) {
-      await this.repo.update(id, { status: "uploaded", error: null });
-      await this.queues.transcribe.add("transcribe", { recordingId: id }, { jobId: `transcribe-${id}` });
-    } else {
-      await this.repo.update(id, { status: "summarizing", error: null });
-      await this.queues.notes.add("notes", { recordingId: id }, { jobId: `notes-${id}` });
-    }
+    const [queue, name, status] = (await this.repo.countSegments(id)) === 0
+      ? [this.queues.transcribe, "transcribe", "uploaded"] as const
+      : [this.queues.notes, "notes", "summarizing"] as const;
+    const jobId = `${name}-${id}`;
+    // BullMQ keeps finished and failed jobs and silently ignores add() with an existing id,
+    // so without this the retry would do nothing
+    await (await queue.getJob(jobId))?.remove();
+    await this.repo.update(id, { status, error: null });
+    await queue.add(name, { recordingId: id }, { jobId });
   }
 
   async delete(userId: string, id: string) {
@@ -79,7 +83,13 @@ export class RecordingsService {
     await this.repo.delete(id);
   }
 
-  // stub; Task 1.15 sums this month's duration_ms and rejects with 402 over MONTHLY_MINUTES_LIMIT
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the 1.15 version uses both
-  private async checkMonthlyLimit(_userId: string, _durationMs: number) {}
+  /** Cost guard: the minutes recorded this month, plus this one, must stay within MONTHLY_MINUTES_LIMIT. */
+  private async checkMonthlyLimit(userId: string, durationMs: number) {
+    const usedMs = await this.repo.durationThisMonth(userId);
+    const limitMs = config.MONTHLY_MINUTES_LIMIT * 60_000;
+    if (usedMs + durationMs > limitMs) {
+      const used = Math.round(usedMs / 60_000);
+      throw httpError(402, `This recording would go over your ${config.MONTHLY_MINUTES_LIMIT} minutes for this month (${used} used). It can be processed next month, or delete older recordings you no longer need.`);
+    }
+  }
 }

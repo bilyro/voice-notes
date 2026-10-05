@@ -1508,11 +1508,12 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 - [x] **Commit:** `feat: markdown export of notes`
 
 ### Task 1.15 — Delete, retry, limits
-- [ ] `DELETE /recordings/:id` removes DB rows (cascade) **and** `storage.deletePrefix(keys.prefix(id))`.
-- [ ] `POST /recordings/:id/retry`: if no segments → enqueue `transcribe`, else enqueue `notes`. **Remove the old job first** (`await (await queue.getJob(jobId))?.remove()`), because BullMQ keeps failed jobs and ignores `add()` with an existing id, so the retry would silently do nothing.
-- [ ] Monthly minutes limit: sum `duration_ms` this month per user; reject `finish` with 402 + friendly message when over `MONTHLY_MINUTES_LIMIT`.
-- [ ] **Verify:** after delete, storage has no objects under the prefix; retry fixes a recording that failed because the API key was missing.
-- [ ] **Commit:** `feat(api): delete, retry and monthly usage limit`
+- [x] `DELETE /recordings/:id` removes DB rows (cascade) **and** `storage.deletePrefix(keys.prefix(id))`.
+- [x] `POST /recordings/:id/retry`: if no segments → enqueue `transcribe`, else enqueue `notes`. **Remove the old job first** (`await (await queue.getJob(jobId))?.remove()`), because BullMQ keeps failed jobs and ignores `add()` with an existing id, so the retry would silently do nothing.
+- [x] Monthly minutes limit: sum `duration_ms` this month per user; reject `finish` with 402 + friendly message when over `MONTHLY_MINUTES_LIMIT`.
+- [x] **As built:** delete already worked this way since Task 1.2 (audio first, then the rows); the new test also checks chunks, `audio.ogg` and segments are gone. `JobQueue` gained `getJob` for the remove-first retry. The limit counts every recording created this calendar month (database time zone) with a duration, failed ones too (their audio was still sent to speech-to-text), and the 402 message says how many minutes are used. The Record page now shows the API's message when finishing fails (network errors keep "check your connection"). Testing note: BullMQ's `add()` returns a new local Job object even when Redis ignored it — check with `getJob`.
+- [x] **Verify:** after delete, storage has no objects under the prefix; retry fixes a recording that failed because the API key was missing.
+- [x] **Commit:** `feat(api): delete, retry and monthly usage limit`
 
 ### Task 1.16 — Deploy for free (Oracle Cloud + Docker Compose + Caddy + DuckDNS)
 **Goal:** the app runs online over HTTPS for $0. HTTPS is not optional: browsers only allow the microphone on secure (HTTPS) pages.
