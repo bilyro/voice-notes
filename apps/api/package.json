@@ -11,6 +11,7 @@
     "lint": "eslint src migrations scripts knexfile.ts",
     "test": "DOTENV_PATH=../../.env vitest run",
     "knex": "DOTENV_PATH=../../.env NODE_OPTIONS=\"--import tsx\" knex",
+    "tsx": "DOTENV_PATH=../../.env tsx",
     "auth:migrate": "DOTENV_PATH=../../.env tsx scripts/auth-migrate.ts"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "fastify": "^5.12.5",
     "ioredis": "^6.0.0",
     "knex": "^3.3.0",
+    "openai": "^7.27.0",
     "pg": "^8.23.1",
     "zod": "^4.6.5"
   },

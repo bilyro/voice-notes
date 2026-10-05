@@ -952,9 +952,9 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
 > ⚠️ Safari records `audio/mp4` instead of webm. Test concatenation there early; if fragments don't join cleanly, upload the whole recording as one chunk on stop for Safari only.
 
 ### Task 1.5 — Speech-to-text interface + one adapter for free (Groq) and paid (OpenAI)
-- [ ] **Files:** `ai/stt/speech-to-text.ts`, `ai/stt/openai-compatible-stt.ts`, `ai/stt/fake-stt.ts`
-- [ ] Create a free Groq account at console.groq.com and an API key → `GROQ_API_KEY` in `.env`.
-- [ ] **Steps:** `pnpm --filter @vn/api add openai` (used for both Groq and OpenAI), and add the script `"tsx": "DOTENV_PATH=../../.env tsx"` to `apps/api/package.json`. Then `pnpm --filter @vn/api tsx scripts/<file>.ts` loads the root `.env`, just as the `knex` script does. Without it, `try-stt.ts` / `try-notes.ts` start without `GROQ_API_KEY` and fail.
+- [x] **Files:** `ai/stt/speech-to-text.ts`, `ai/stt/openai-compatible-stt.ts`, `ai/stt/fake-stt.ts`
+- [x] Create a free Groq account at console.groq.com and an API key → `GROQ_API_KEY` in `.env`.
+- [x] **Steps:** `pnpm --filter @vn/api add openai` (used for both Groq and OpenAI), and add the script `"tsx": "DOTENV_PATH=../../.env tsx"` to `apps/api/package.json`. Then `pnpm --filter @vn/api tsx scripts/<file>.ts` loads the root `.env`, just as the `knex` script does. Without it, `try-stt.ts` / `try-notes.ts` start without `GROQ_API_KEY` and fail.
 
 ```ts
 // apps/api/src/ai/stt/speech-to-text.ts
@@ -1017,8 +1017,8 @@ export class FakeStt implements SpeechToText {
 }
 ```
 
-- [ ] **Verify:** with `STT_PROVIDER=groq`, a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints English segments with timestamps ($0).
-- [ ] **Commit:** `feat(api): openai-compatible speech-to-text adapter (groq free / openai paid)`
+- [x] **Verify:** with `STT_PROVIDER=groq`, a script `pnpm --filter @vn/api tsx scripts/try-stt.ts sample.ogg` prints English segments with timestamps ($0).
+- [x] **Commit:** `feat(api): openai-compatible speech-to-text adapter (groq free / openai paid)`
 
 > Why `whisper-1` for the paid stage and not the cheaper gpt-4o transcribe models: those return only text/JSON without segment timestamps, and the app needs timestamps. File size limit: both Groq (free tier) and OpenAI accept files up to 25 MB. At 24 kbps Opus that is ~2 hours. For longer recordings, split with ffmpeg (`-f segment -segment_time 1800`) and offset the timestamps.
 
