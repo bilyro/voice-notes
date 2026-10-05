@@ -93,3 +93,6 @@
   gap: var(--space-3);
   margin-top: var(--space-7);
 }
+.copyError {
+  margin-top: var(--space-2);
+}

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
+import { notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { Button } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
@@ -27,6 +27,9 @@ const STEPS: { status: Recording["status"]; label: string }[] = [
   { status: "ready", label: "Ready" },
 ];
 
+/** "Science fair: planning!" → "science-fair-planning.md" */
+const fileName = (title: string) => `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "notes"}.md`;
+
 /** 100_000 → "1 min 40 s" */
 function longDuration(ms: number) {
   const s = Math.round(ms / 1000);
@@ -43,6 +46,7 @@ export function RecordingDetailPage() {
   const [timeMs, setTimeMs] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
 
   const { data, error } = useQuery({
     queryKey: key,
@@ -98,6 +102,26 @@ export function RecordingDetailPage() {
   const rec = data.recording;
   const notes = data.notes ? SavedNotes.parse(data.notes.content) : null;   // fills in done: false for AI notes
   const seek = (ms: number) => player.current?.seek(ms);
+  const longDate = new Date(rec.createdAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const markdown = () => notesToMarkdown(rec.title, notes!, longDate);
+
+  async function copyMarkdown() {
+    try {
+      await navigator.clipboard.writeText(markdown());
+      setCopy("copied");
+    } catch {
+      setCopy("failed");
+    }
+    setTimeout(() => setCopy("idle"), 2500);
+  }
+
+  function downloadMarkdown() {
+    const url = URL.createObjectURL(new Blob([markdown()], { type: "text/markdown;charset=utf-8" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: fileName(rec.title) });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const toggleDone = (i: number) =>
     notes && save.mutate({ ...notes, actionItems: notes.actionItems.map((a, j) => (j === i ? { ...a, done: !a.done } : a)) });
 
@@ -107,19 +131,30 @@ export function RecordingDetailPage() {
       <h1 className={styles.title}>{rec.title}</h1>
       <div className={styles.meta}>
         <span className={styles.chip}>{MODE_LABEL[rec.mode]}</span>
-        <span>{new Date(rec.createdAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
+        <span>{longDate}</span>
         {rec.durationMs !== null && <span className="tabular">{longDuration(rec.durationMs)}</span>}
       </div>
 
       {rec.status === "ready" && notes && !editing && (
         <div className={styles.actions}>
-          {/* Copy as Markdown / Download .md arrive in Task 1.14, More actions (delete) in Task 1.15 */}
+          {/* More actions (delete) arrives in Task 1.15 */}
+          <Button variant="secondary" onClick={copyMarkdown}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+            {copy === "copied" ? "Copied" : "Copy as Markdown"}
+          </Button>
+          <Button variant="secondary" onClick={downloadMarkdown}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg>
+            Download .md
+          </Button>
           <Button variant="secondary" onClick={() => { setTab("notes"); setEditing(true); }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
             Edit notes
           </Button>
         </div>
       )}
+
+      <p className={`visually-hidden`} role="status">{copy === "copied" ? "Notes copied as Markdown" : ""}</p>
+      {copy === "failed" && <p className={`${styles.error} ${styles.copyError}`} role="alert">Copying is blocked in this browser. Use Download .md instead.</p>}
 
       {PROCESSING.includes(rec.status) && (
         <ol className={styles.steps} aria-label="Processing">

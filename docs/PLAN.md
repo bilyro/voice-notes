@@ -1478,7 +1478,7 @@ const { data } = useQuery({
 - [x] **Commit:** `feat(web): recording detail with player, transcript and notes editor`
 
 ### Task 1.14 — Markdown export
-- [ ] **Files:** `packages/shared/src/notes-to-markdown.ts` (shared so desktop/mobile reuse it)
+- [x] **Files:** `packages/shared/src/notes-to-markdown.ts` (shared so desktop/mobile reuse it)
 
 ```ts
 export function notesToMarkdown(title: string, n: Notes, date: string) {
@@ -1489,7 +1489,7 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
     list("Key points", n.keyPoints),
     list("Decisions", n.decisions),
     n.actionItems.length
-      ? `## Action items\n${n.actionItems.map((a) => `- [ ] ${a.text}${a.owner ? ` — ${a.owner}` : ""}${a.dueDate ? ` (${a.dueDate})` : ""}`).join("\n")}\n`
+      ? `## Action items\n${n.actionItems.map((a) => `- [x] ${a.text}${a.owner ? ` — ${a.owner}` : ""}${a.dueDate ? ` (${a.dueDate})` : ""}`).join("\n")}\n`
       : "",
     list("Proposals", n.proposals),
     list("Open questions", n.openQuestions),
@@ -1502,9 +1502,10 @@ export function notesToMarkdown(title: string, n: Notes, date: string) {
 }
 ```
 
-- [ ] Buttons: **Copy as Markdown** and **Download .md**.
-- [ ] **Verify:** unit test with a sample `Notes` object; empty sections are not printed. (This is the shared package's first test: add `"test": "vitest run"` to `packages/shared/package.json`.)
-- [ ] **Commit:** `feat: markdown export of notes`
+- [x] Buttons: **Copy as Markdown** and **Download .md**.
+- [x] **As built:** three small changes to the code above: a ticked action item prints as `- [x]` (notes saved from the editor carry `done`, Task 1.13); an empty summary is left out like any other empty section; and proposals print as "Suggested next steps" with the line "_Ideas from the assistant. Nobody said these in the meeting._", because exported notes get shared and DESIGN.md keeps AI suggestions labelled. The buttons sit before **Edit notes**; Download names the file after the title (`science-fair-planning.md`).
+- [x] **Verify:** unit test with a sample `Notes` object; empty sections are not printed. (This is the shared package's first test: add `"test": "vitest run"` to `packages/shared/package.json`.)
+- [x] **Commit:** `feat: markdown export of notes`
 
 ### Task 1.15 — Delete, retry, limits
 - [ ] `DELETE /recordings/:id` removes DB rows (cascade) **and** `storage.deletePrefix(keys.prefix(id))`.
