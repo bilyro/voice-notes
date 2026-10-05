@@ -120,6 +120,26 @@ export class RecordingsRepository {
     });
   }
 
+  /** AI notes (not user-edited) as the next version. */
+  insertNotes(recordingId: string, content: Notes) {
+    return this.saveNotesVersion(recordingId, content, false);
+  }
+
+  /** Delete + insert, so a retried notes job never leaves duplicates. */
+  async replaceActionItems(recordingId: string, userId: string, items: Notes["actionItems"]) {
+    await this.db("action_items").where({ recording_id: recordingId }).delete();
+    if (items.length) {
+      await this.db("action_items").insert(
+        items.map((a) => ({ recording_id: recordingId, user_id: userId, text: a.text, owner: a.owner, due_date: a.dueDate })),
+      );
+    }
+  }
+
+  /** Runs `fn` with a repository bound to one transaction: all its writes commit together or not at all. */
+  transaction<T>(fn: (trx: RecordingsRepository) => Promise<T>) {
+    return this.db.transaction((trx) => fn(new RecordingsRepository(trx)));
+  }
+
   /** Segments, notes and action items go with it (on delete cascade). */
   delete(id: string) {
     return this.db("recordings").where({ id }).delete();

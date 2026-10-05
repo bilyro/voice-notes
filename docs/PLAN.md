@@ -1304,7 +1304,7 @@ export class ClaudeNotes extends ChunkedNotesGenerator {
 > Check the current model names and SDK details in the official docs (https://docs.claude.com/en/api/overview) when you switch to Claude; the model is configurable via `NOTES_MODEL`.
 
 ### Task 1.9 — Notes job
-- [ ] **Files:** `apps/api/src/jobs/notes.job.ts`
+- [x] **Files:** `apps/api/src/jobs/notes.job.ts`
 
 ```ts
 // apps/api/src/jobs/notes.job.ts
@@ -1333,8 +1333,8 @@ export async function notesJob(recordingId: string) {
 }
 ```
 
-- [ ] **Verify:** full pipeline test with `FakeStt` + `FakeNotes` (providers mocked as in Task 1.6): create → chunks → finish → run both jobs → status `ready`, notes row exists, action items saved.
-- [ ] **Commit:** `feat(api): notes job saves notes and action items`
+- [x] **Verify:** full pipeline test with `FakeStt` + `FakeNotes` (providers mocked as in Task 1.6): create → chunks → finish → run both jobs → status `ready`, notes row exists, action items saved.
+- [x] **Commit:** `feat(api): notes job saves notes and action items`
 
 ### Task 1.10 — Browser recorder hook + chunk uploader
 - [ ] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/chunk-uploader.ts`
