@@ -1,0 +1,19 @@
+.ready,
+.muted,
+.failed {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 14px;
+}
+.ready {
+  gap: 6px;
+}
+.muted {
+  gap: 10px;
+  color: var(--color-ink-muted);
+}
+.failed {
+  gap: 6px var(--space-3);
+  color: var(--color-error);
+}

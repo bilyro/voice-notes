@@ -1,0 +1,14 @@
+.track {
+  display: inline-block;
+  width: 64px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-line);
+  overflow: hidden;
+}
+.fill {
+  display: block;
+  height: 4px;
+  background: var(--color-ink);
+  transition: width 300ms ease;
+}

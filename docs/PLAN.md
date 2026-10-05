@@ -1447,8 +1447,8 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
 - [x] **Commit:** `feat(web): record page`
 
 ### Task 1.12 — Recordings list with live status
-- [ ] **Files:** `apps/web/src/pages/RecordingsPage.tsx`
-- [ ] **Design:** `docs/design/screens/Recordings.dc.html`.
+- [x] **Files:** `apps/web/src/pages/RecordingsPage.tsx`
+- [x] **Design:** `docs/design/screens/Recordings.dc.html`.
 
 ```ts
 const { data } = useQuery({
@@ -1460,9 +1460,10 @@ const { data } = useQuery({
 });
 ```
 
-- [ ] Rows: icon tile per mode, title, "Mode, duration", status (ready / processing with progress bar / failed with **Try again**), date; grouped by "This week" / "Last week" / month. Filter pills by mode work now (client-side). The search field and minutes meter come later (Phase 2, Task 1b.4).
-- [ ] Empty state: "No recordings yet" + **New recording** button.
-- [ ] **Commit:** `feat(web): recordings list with status polling`
+- [x] Rows: icon tile per mode, title, "Mode, duration", status (ready / processing with progress bar / failed with **Try again**), date; grouped by "This week" / "Last week" / month. Filter pills by mode work now (client-side). The search field and minutes meter come later (Phase 2, Task 1b.4).
+- [x] Empty state: "No recordings yet" + **New recording** button.
+- [x] **As built:** `FilterPills`, `ProgressBar` and `StatusLabel` are components (DESIGN.md section 5), so the detail page can reuse them. Polling runs only while a recording is `uploaded` / `transcribing` / `summarizing`: a never-finished `recording` row (closed tab) would otherwise poll forever; it shows "Not finished". Ready rows say "Notes ready" (the mockup's "3 action items" needs a count from the API, Phase 2). Failed rows show plain words ("No speech found in the audio", otherwise "Processing failed") instead of the stored error. **Try again** calls `POST /retry`; until Task 1.15 removes the old BullMQ job, the re-queued job may be ignored.
+- [x] **Commit:** `feat(web): recordings list with status polling`
 
 ### Task 1.13 — Recording detail page
 - [ ] **Files:** `RecordingDetailPage.tsx`, `components/AudioPlayer.tsx`, `components/Tabs.tsx`, `components/Transcript.tsx`, `components/NotesEditor.tsx`, `components/TimestampLink.tsx`
