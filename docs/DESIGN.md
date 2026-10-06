@@ -113,13 +113,14 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | Recording in progress | `screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop) | Task 1.11 (web), Phase 4 (native app) |
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |
 | Recording detail (Notes / Transcript tabs) | `screens/RecordingDetail.dc.html` | Task 1.13, buttons in 1.14 |
+| Sign in / Create account: form column on the right (max 400px, logo links to `/`), grey panel on the left (example notes / the 3 steps + free-plan note), stacking under the form on a phone; Show/Hide password; errors are red text only | design canvas, artboards `SignIn`, `SignUp` | Task 1.19 |
 | Landing page (`/` when signed out): header, hero + example notes card, how it works, modes + suggestion box, free plan, final call to action, footer | design canvas, artboard `Landing` | Task 1.18 |
 | Recording detail: delete (secondary "Delete" at the end of the actions row, every status; inline grey confirmation with black "Delete recording" + "Keep it", no modal) | design canvas, artboard `DeleteRecording` | Task 1.17 |
 
 Some things in the mockups arrive later. Show them only when their task is built:
 search (Phase 2), Action items page (Phase 2), Settings, minutes-used meter (Task 1b.4), "Assign" button (Phase 2).
 
-Not designed yet (follow this spec when you get there): sign-in / sign-up, empty states, Settings, Action items page, lesson-mode sections (Concepts, Review questions — use the same section style as Decisions), memo-mode Ideas.
+Not designed yet (follow this spec when you get there): empty states, Settings, Action items page, lesson-mode sections (Concepts, Review questions — use the same section style as Decisions), memo-mode Ideas.
 
 ## 7. States to always handle
 

@@ -1,51 +1,91 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { Link, Navigate, useNavigate } from "react-router";
 import { authClient } from "../lib/auth-client";
 import { Button } from "../components/Button";
+import { PasswordField } from "../components/PasswordField";
+import { useReturnTo } from "../lib/return-to";
 import { AuthLayout } from "./AuthLayout";
 import styles from "./Auth.module.css";
 
+const STEPS = [
+  { title: "Record in the browser", text: "Meetings, lessons or quick voice memos. Nothing to install.", icon: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3" /></> },
+  { title: "Get the transcript", text: "Every line has a timestamp that plays the audio from there.", icon: <><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h10" /></> },
+  { title: "Use the notes", text: "Summary, decisions and action items, ready to edit or copy.", icon: <><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><path d="M8 12l3 3 5-6" /></> },
+];
+
 export function SignUpPage() {
   const navigate = useNavigate();
-  const { refetch: refetchSession } = authClient.useSession();
-  const [error, setError] = useState<string | null>(null);
+  const returnTo = useReturnTo();
+  const { data: session, refetch: refetchSession } = authClient.useSession();
+  const [error, setError] = useState<ReactNode>(null);
   const [pending, setPending] = useState(false);
+
+  if (session) return <Navigate to={returnTo} replace />;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setPending(true);
+    setError(null);
     const { error } = await authClient.signUp.email({
       name: String(form.get("name")),
       email: String(form.get("email")),
       password: String(form.get("password")),
     });
     setPending(false);
-    if (error) return setError(error.message ?? "Sign up failed");
+    if (error) {
+      // Better Auth error codes, with the server's message as the fallback
+      if (error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
+        return setError(<>An account with this email already exists. <Link to="/login" state={{ from: returnTo }}>Sign in instead</Link></>);
+      }
+      if (error.code === "PASSWORD_TOO_SHORT") return setError("The password needs at least 8 characters.");
+      return setError(error.message ?? "Creating the account failed. Check your connection, then try again.");
+    }
     // update the shared session store first, or RequireAuth sees the old (signed-out) session
     await refetchSession();
-    navigate("/", { replace: true });   // sign-up also signs you in
+    navigate(returnTo, { replace: true });   // sign-up also signs you in
   }
 
   return (
-    <AuthLayout title="Create account">
+    <AuthLayout title="Create account" subtitle="Free while we test it. Recording minutes have a monthly limit." panel={<Steps />}>
       <form className={styles.form} onSubmit={onSubmit}>
-        <label className={styles.field}>
-          Name
-          <input className={styles.input} name="name" autoComplete="name" required />
-        </label>
-        <label className={styles.field}>
-          Email
-          <input className={styles.input} name="email" type="email" autoComplete="email" required />
-        </label>
-        <label className={styles.field}>
-          Password
-          <input className={styles.input} name="password" type="password" autoComplete="new-password" minLength={8} required />
-        </label>
+        <div className={styles.field}>
+          <label htmlFor="name" className={styles.label}>Name</label>
+          <input id="name" className={styles.input} name="name" autoComplete="name" required />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="email" className={styles.label}>Email</label>
+          <input id="email" className={styles.input} name="email" type="email" autoComplete="email" required />
+        </div>
+        <PasswordField autoComplete="new-password" minLength={8} />
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <Button type="submit" block disabled={pending}>{pending ? "Creating account…" : "Create account"}</Button>
+        <Button type="submit" block disabled={pending} className={styles.submit}>{pending ? "Creating account…" : "Create account"}</Button>
       </form>
-      <p className={styles.switch}>Have an account? <Link to="/login">Sign in</Link></p>
+      <p className={styles.switch}>
+        Already have an account? <Link to="/login" state={{ from: returnTo }}>Sign in</Link>
+      </p>
     </AuthLayout>
+  );
+}
+
+/** Left panel: what you get, plus the free-plan notice. */
+function Steps() {
+  return (
+    <ol className={styles.steps}>
+      {STEPS.map((s) => (
+        <li key={s.title} className={styles.step}>
+          <span className={styles.tile} aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{s.icon}</svg>
+          </span>
+          <span>
+            <strong className={styles.stepTitle}>{s.title}</strong>
+            <span className={styles.stepText}>{s.text}</span>
+          </span>
+        </li>
+      ))}
+      <li className={styles.freeNote}>
+        <strong>Free plan:</strong> recordings are processed by a free service with no privacy guarantee. Use it for test recordings.
+      </li>
+    </ol>
   );
 }

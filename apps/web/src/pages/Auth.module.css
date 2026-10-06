@@ -1,17 +1,27 @@
-/* sign-in / sign-up: not in the mockups, so built from the spec (docs/DESIGN.md section 6) */
+/* sign-in / sign-up: design canvas, artboards "SignIn" and "SignUp" (docs/DESIGN.md section 6). Tokens only. */
 .page {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-4);
+  display: flex;
+  flex-direction: row-reverse;   /* form (first in the HTML) on the right, panel on the left */
+  flex-wrap: wrap;
+  min-height: 100vh;
 }
 
+.formColumn {
+  flex: 1 1 480px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) clamp(16px, 4vw, 40px);
+}
 .logo {
   display: flex;
   align-items: center;
+  align-self: flex-start;
   gap: 10px;
-  margin-bottom: var(--space-6);
+  min-height: 44px;
   font-size: 18px;
   font-weight: 600;
+  text-decoration: none;
 }
 .dot {
   width: 10px;
@@ -19,37 +29,169 @@
   border-radius: 50%;
   background: var(--color-record);
 }
+.formBox {
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  padding-block: var(--space-7);
+}
+.subtitle {
+  margin-top: var(--space-2);
+  color: var(--color-ink-muted);
+}
 
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }
-
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.label {
   font-size: 14px;
   font-weight: 600;
 }
-
 .input {
+  width: 100%;
   min-height: 44px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-line);   /* stays grey on errors: red is for error text only */
   border-radius: var(--radius-md);
   background: var(--color-bg);
-  font-weight: 400;
 }
-
-.error {
-  color: var(--color-error);
+.passwordWrap {
+  position: relative;
+}
+.passwordInput {
+  padding-right: 64px;
+}
+.toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
   font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
-
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.hintMet {
+  color: var(--color-ink);
+}
+.error {
+  font-size: 14px;
+  color: var(--color-error);
+}
+.error a {
+  color: var(--color-error);
+  font-weight: 600;
+}
+.submit {
+  margin-top: var(--space-2);
+}
 .switch {
   margin-top: var(--space-5);
   font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.switch a {
+  font-weight: 600;
+}
+
+/* grey panel */
+.panel {
+  flex: 1 1 420px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) clamp(16px, 4vw, 40px);
+  background: var(--color-surface);
+}
+.panelBox {
+  width: 100%;
+  max-width: 440px;
+}
+.panelMeta {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.panelSummary {
+  margin-top: var(--space-2);
+  font-size: 19px;
+  line-height: 1.6;
+}
+.panelList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--color-line);
+  list-style: none;
+}
+.panelList li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  justify-content: space-between;
+  align-items: baseline;
+}
+.panelList li span:last-child {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: flex;
+  gap: var(--space-4);
+}
+.tile {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+.stepTitle {
+  display: block;
+  font-weight: 600;
+}
+.stepText {
+  display: block;
+  color: var(--color-ink-soft);
+}
+.freeNote {
+  padding: var(--space-4) 20px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+}
+.freeNote strong {
+  color: var(--color-ink);
 }
