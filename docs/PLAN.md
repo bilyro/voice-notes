@@ -1800,6 +1800,23 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - Encryption at rest, rate limits, Sentry error monitoring, structured logs.
 - Backups for Postgres and object storage.
 
+### Phase 8 — Teams: organisations and roles (≈2–3 weeks)
+> Added after Phase 1 was built. **Starts only after Phase 1b (paid, private stack) and Phase 7's legal basics** (recording consent, GDPR, deletion on request): organisations share real, often confidential meetings, and the free stack has no privacy guarantee.
+- **Account types:** a solo account is a user without an organisation, and stays exactly as today. A user can create an organisation or join one by invitation; one user may belong to several.
+- **Roles:**
+
+  | Role | Can do |
+  |---|---|
+  | Owner | everything, plus billing and deleting the organisation |
+  | Admin | invite and remove members, change roles, see and manage all shared recordings |
+  | Member | record, edit their own notes, see recordings shared with the organisation |
+  | Viewer | read shared recordings and notes; no recording, editing or ticking items |
+- **Sharing model:** recordings are private by default; the owner of a recording can switch "Share with *organisation*". Shared recordings appear in a per-organisation list; the sidebar gets an organisation switcher (personal / each organisation).
+- **How:** Better Auth's official `organization` plugin (already our auth library, no new dependency): organisations, members, invitations, owner/admin/member roles and a custom `viewer` role via its access-control config. Migration: `recordings.organization_id` (nullable) + `shared` flag.
+- **Permissions in one place:** the ownership check (`getOwned` in the recordings repository) becomes "owned by me, or shared in an organisation where my role allows this action". Every route keeps returning 404, not 403, for things you can't see.
+- **Needs first:** transactional email for invitations (pick a provider; free tiers exist), and per-organisation minute limits (Phase 7 billing becomes per organisation / per seat).
+- **Done when:** an owner invites a member and a viewer by email; the member's shared recording is visible to both; the viewer cannot edit, tick, record or delete (API returns 404/403 as designed, UI hides the actions); removing a member removes access at once; a solo user sees no change.
+
 ---
 
 ## 10. Risks and how we handle them
@@ -1833,5 +1850,6 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 | 5 Live mode | ~2 weeks | Real-time transcript |
 | 6 Local processing | 2–3 weeks | Private/offline mode |
 | 7 Hardening + SaaS | ongoing | Billing, legal, ready for real users |
+| 8 Teams | 2–3 weeks | Organisations, invitations, owner / admin / member / viewer roles, shared recordings |
 
 Estimates assume part-time work alongside a job; adjust after Phase 0 based on your real speed.
