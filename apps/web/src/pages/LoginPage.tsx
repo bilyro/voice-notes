@@ -57,17 +57,26 @@ export function LoginPage() {
   );
 }
 
-/** Left panel: a sample of what a recording turns into. */
+/** Left side: last week's meeting as three pinned cards (decoration around a real sample). */
 function ExampleNotes() {
   return (
     <>
-      <p className={styles.panelMeta}>From a staff meeting</p>
-      <p className={styles.panelSummary}>The team agreed to move the science fair to the gym and split setup between two classes.</p>
-      <ul className={styles.panelList}>
-        <li><span>Science fair moves to the gym</span><span className="tabular">4:12</span></li>
-        <li><span>Send the parent newsletter</span><span>Sam, by Friday</span></li>
-        <li><span>Book the gym for March 14</span><span>Dana, by Monday</span></li>
-      </ul>
+      <p className={`pencil ${styles.pencilNote}`} aria-hidden="true">last week’s staff meeting:</p>
+      <div className={styles.paperCard}>
+        <span className={styles.tape} aria-hidden="true" />
+        <p className={styles.cardLabel}>Summary</p>
+        <p className={styles.cardText}>The fair moves to the gym; two classes share setup.</p>
+      </div>
+      <div className={styles.decisionCard}>
+        <span className={styles.pin} aria-hidden="true" />
+        <p className={styles.cardLabel}>Decision · <span className="tabular">4:12</span></p>
+        <p className={styles.decisionText}>Science fair moves to the gym.</p>
+      </div>
+      <div className={styles.todoCard}>
+        <p className={styles.cardLabel}>Action items</p>
+        <p className={styles.cardText}>Book the gym, Dana by Monday</p>
+        <p className={styles.cardText}>Send the newsletter, Sam by Friday</p>
+      </div>
     </>
   );
 }

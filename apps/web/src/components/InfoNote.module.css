@@ -1,7 +1,8 @@
 .note {
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
   color: var(--color-ink-soft);
   font-size: 14px;
 }

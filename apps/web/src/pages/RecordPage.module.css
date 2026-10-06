@@ -24,7 +24,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-input);
   background: var(--color-bg);
 }
 
@@ -55,14 +55,17 @@
   color: var(--color-ink);
 }
 
+/* the record button sits on its own white card */
 .start {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  margin-top: var(--space-8);
-  padding-top: var(--space-7);
-  border-top: 1px solid var(--color-line);
+  margin-top: var(--space-7);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 .consent {
@@ -90,8 +93,9 @@
 }
 .chip {
   padding: 2px 10px;
-  border: 1px solid var(--color-line);
   border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
   font-size: 14px;
 }
 .badge {
@@ -101,7 +105,7 @@
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--color-record-soft);
-  color: var(--color-error);
+  color: var(--color-record-dark);
   font-size: 14px;
   font-weight: 600;
 }
@@ -119,6 +123,7 @@
   overflow-wrap: anywhere;
 }
 
+/* timer, waveform and save status on one white card */
 .center {
   flex: 1 1 auto;
   display: flex;
@@ -126,7 +131,11 @@
   align-items: center;
   justify-content: center;
   gap: 28px;
-  padding: var(--space-6) 0;
+  margin: var(--space-5) 0;
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 .timer {
   font-size: 84px;
@@ -197,7 +206,8 @@
   height: 64px;
   margin-top: 20px;               /* centres it on the larger stop button */
   border-radius: 50%;
-  background: var(--color-surface);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
 }
 
 .status {

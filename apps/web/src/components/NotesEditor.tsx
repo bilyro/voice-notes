@@ -33,7 +33,8 @@ export function NotesEditor(props: Props) {
 function NotesView({ notes, onToggleDone, saving }: Props) {
   const list = (key: ListKey) =>
     notes[key].length > 0 && (
-      <section aria-labelledby={`h-${key}`}>
+      <section aria-labelledby={`h-${key}`} className={key === "decisions" ? styles.decisionCard : styles.card}>
+        {key === "decisions" && <span className={styles.pin} aria-hidden="true" />}
         <h2 id={`h-${key}`} className={styles.heading}>{LIST_LABEL[key]}</h2>
         <ul className={styles.list}>{notes[key].map((item, i) => <li key={i}>{item}</li>)}</ul>
       </section>
@@ -41,10 +42,15 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
 
   return (
     <div className={styles.view}>
-      {notes.summary && <p className={styles.summary}>{notes.summary}</p>}
+      {notes.summary && (
+        <section aria-labelledby="h-summary" className={styles.card}>
+          <h2 id="h-summary" className={styles.heading}>Summary</h2>
+          <p className={styles.summary}>{notes.summary}</p>
+        </section>
+      )}
 
       {notes.actionItems.length > 0 && (
-        <section aria-labelledby="h-actions">
+        <section aria-labelledby="h-actions" className={styles.todoCard}>
           <h2 id="h-actions" className={styles.heading}>Action items</h2>
           <div>
             {notes.actionItems.map((a, i) => (
@@ -64,7 +70,7 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
       {list("decisions")}
 
       {notes.concepts.length > 0 && (
-        <section aria-labelledby="h-concepts">
+        <section aria-labelledby="h-concepts" className={styles.card}>
           <h2 id="h-concepts" className={styles.heading}>Concepts</h2>
           <ul className={styles.list}>
             {notes.concepts.map((c, i) => <li key={i}><strong>{c.term}</strong>: {c.explanation}</li>)}
@@ -76,7 +82,7 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
       {list("ideas")}
 
       {notes.proposals.length > 0 && (
-        <section aria-labelledby="h-proposals" className={styles.suggestions}>
+        <section aria-labelledby="h-proposals" className={styles.ideaCard}>
           <h2 id="h-proposals" className={styles.boxHeading}>Suggested next steps</h2>
           <p className={styles.boxNote}>Ideas from the assistant. Nobody said these in the meeting.</p>
           <ul className={styles.list}>{notes.proposals.map((p, i) => <li key={i}>{p}</li>)}</ul>

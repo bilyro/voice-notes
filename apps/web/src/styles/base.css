@@ -7,7 +7,10 @@
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  /* the board: warm grey with a faint dot grid */
+  background-color: var(--color-board);
+  background-image: radial-gradient(var(--color-board-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -17,16 +20,16 @@ body {
 
 h1 {
   margin: 0;
-  font-size: 36px;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
 h2 {
   margin: 0;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 p {
@@ -61,6 +64,14 @@ textarea {
 
 .muted {
   color: var(--color-ink-muted);
+}
+
+/* handwritten margin notes: decoration only, so pages mark them aria-hidden */
+.pencil {
+  font-family: var(--font-hand);
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--color-pencil);
 }
 
 .visually-hidden {

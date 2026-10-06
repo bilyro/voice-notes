@@ -11,11 +11,11 @@
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 14px;
   padding: 10px var(--space-3);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   cursor: pointer;
 }
 .row[aria-current="true"] {
-  background: var(--color-surface);
+  background: var(--color-card-decision);
 }
 .speaker {
   font-size: 14px;

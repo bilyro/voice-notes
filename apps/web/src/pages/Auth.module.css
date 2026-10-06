@@ -19,21 +19,25 @@
   align-self: flex-start;
   gap: 10px;
   min-height: 44px;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 800;
   text-decoration: none;
 }
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-record);
-}
+/* the form is one straight white card */
 .formBox {
   width: 100%;
-  max-width: 400px;
-  margin: auto;
-  padding-block: var(--space-7);
+  max-width: 420px;
+  margin: var(--space-7) auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+}
+@media (max-width: 599px) {
+  .formBox {
+    margin-block: var(--space-5);
+    padding: var(--space-5) var(--space-4);
+  }
 }
 .subtitle {
   margin-top: var(--space-2);
@@ -57,10 +61,10 @@
 }
 .input {
   width: 100%;
-  min-height: 44px;
-  padding: 0 var(--space-3);
+  min-height: 48px;
+  padding: 0 14px;
   border: 1px solid var(--color-line);   /* stays grey on errors: red is for error text only */
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-input);
   background: var(--color-bg);
 }
 .passwordWrap {
@@ -71,13 +75,13 @@
 }
 .toggle {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   min-height: 36px;
   padding: 0 10px;
   border: 0;
   border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  background: var(--color-surface);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -112,7 +116,7 @@
   font-weight: 600;
 }
 
-/* grey panel */
+/* the board side: tilted example cards (decoration, so tilt is allowed here) */
 .panel {
   flex: 1 1 420px;
   min-width: 0;
@@ -120,78 +124,97 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-8) clamp(16px, 4vw, 40px);
-  background: var(--color-surface);
 }
 .panelBox {
   width: 100%;
-  max-width: 440px;
-}
-.panelMeta {
-  font-size: 14px;
-  color: var(--color-ink-muted);
-}
-.panelSummary {
-  margin-top: var(--space-2);
-  font-size: 19px;
-  line-height: 1.6;
-}
-.panelList {
+  max-width: 420px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-5) 0 0;
-  padding: 20px 0 0;
-  border-top: 1px solid var(--color-line);
-  list-style: none;
+  gap: 26px;
 }
-.panelList li {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  justify-content: space-between;
-  align-items: baseline;
+.pencilNote {
+  transform: rotate(-2deg);
 }
-.panelList li span:last-child {
-  font-size: 14px;
-  color: var(--color-ink-muted);
-}
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.step {
-  display: flex;
-  gap: var(--space-4);
-}
-.tile {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-lg);
+.paperCard,
+.decisionCard,
+.todoCard {
+  position: relative;
+  padding: var(--space-5) 20px 18px;
+  border-radius: var(--radius-card);
   background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
-.stepTitle {
-  display: block;
+.paperCard {
+  transform: rotate(-1.5deg);
+}
+.decisionCard {
+  margin-left: 28px;
+  background: var(--color-card-decision);
+  box-shadow: 0 2px 0 var(--color-card-decision-edge), var(--shadow-lift);
+  transform: rotate(1.2deg);
+}
+.todoCard {
+  margin-right: 18px;
+  background: var(--color-card-todo);
+  box-shadow: 0 2px 0 var(--color-card-todo-edge), var(--shadow-lift);
+  transform: rotate(-0.8deg);
+}
+.tape {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  margin-left: -42px;
+  background: var(--color-tape);
+  transform: rotate(3deg);
+}
+.pin {
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-record);
+  box-shadow: 0 2px 0 var(--color-record-dark);
+}
+.cardLabel {
+  font-size: 14px;
   font-weight: 600;
+  color: var(--color-ink-muted);
 }
-.stepText {
-  display: block;
-  color: var(--color-ink-soft);
+.decisionCard .cardLabel {
+  color: var(--color-card-decision-ink);
+}
+.todoCard .cardLabel {
+  color: var(--color-card-todo-ink);
+}
+.cardText {
+  margin-top: var(--space-1);
+  font-size: 17px;
+}
+.decisionText {
+  margin-top: var(--space-1);
+  font-size: 19px;
+  font-weight: 800;
 }
 .freeNote {
   padding: var(--space-4) 20px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
   font-size: 14px;
   color: var(--color-ink-soft);
 }
 .freeNote strong {
   color: var(--color-ink);
+}
+.stepTitle {
+  display: block;
+  font-weight: 800;
+}
+.stepText {
+  display: block;
+  color: var(--color-ink-soft);
 }

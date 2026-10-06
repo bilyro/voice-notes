@@ -5,7 +5,7 @@ import type { RecordingMode } from "@vn/shared";
 import { Button } from "../components/Button";
 import { InfoNote } from "../components/InfoNote";
 import { RecordButton } from "../components/RecordButton";
-import { SegmentedControl } from "../components/SegmentedControl";
+import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
 import { ChunkUploader } from "../recorder/chunk-uploader";
@@ -14,10 +14,11 @@ import { CHUNK_MS, pickMimeType, useRecorder } from "../recorder/use-recorder";
 import page from "./Page.module.css";
 import styles from "./RecordPage.module.css";
 
-const MODES: { value: RecordingMode; label: string }[] = [
-  { value: "meeting", label: "Meeting" },
-  { value: "lesson", label: "Lesson" },
-  { value: "memo", label: "Voice memo" },
+// each mode wears the color of the card it produces most (DESIGN.md: decisions, to-dos, ideas)
+const MODES: { value: RecordingMode; label: string; tone: Tone }[] = [
+  { value: "meeting", label: "Meeting", tone: "decision" },
+  { value: "lesson", label: "Lesson", tone: "todo" },
+  { value: "memo", label: "Voice memo", tone: "idea" },
 ];
 const HINTS: Record<RecordingMode, string> = {
   meeting: "Notes will focus on decisions, owners and deadlines.",

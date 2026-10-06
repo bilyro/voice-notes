@@ -3,8 +3,9 @@
   align-items: center;
   gap: 14px;
   padding: var(--space-2) 18px var(--space-2) var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
 }
 .play {
   flex: none;
@@ -30,7 +31,7 @@
 .track {
   position: relative;
   flex: 1 1 auto;
-  height: 4px;
+  height: 6px;
   border-radius: var(--radius-pill);
   background: var(--color-track);
 }
@@ -44,13 +45,15 @@
   border-radius: var(--radius-pill);
   background: var(--color-ink);
 }
+/* the playhead: a red pen mark across the track */
 .knob {
   position: absolute;
-  top: -5px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--color-ink);
+  top: -9px;
+  width: 3px;
+  height: 24px;
+  margin-left: 5.5px;   /* the inline style offsets by half of the old 14px knob */
+  border-radius: 2px;
+  background: var(--color-record);
 }
 .range {
   position: absolute;
@@ -65,10 +68,10 @@
 .speed {
   flex: none;
   min-height: 36px;
-  padding: 0 var(--space-2);
-  border: none;
+  padding: 0 10px;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
-  background: transparent;
+  background: var(--color-bg);
   color: var(--color-ink);
   font-size: 14px;
   font-weight: 600;

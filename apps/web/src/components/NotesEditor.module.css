@@ -1,16 +1,74 @@
-/* reading: docs/design/screens/RecordingDetail.dc.html (Notes tab) */
+/* reading: one card per section (design canvas, CardsDetail) */
 .view {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
-  padding-top: 28px;
+  gap: 20px;
+  padding-top: var(--space-5);
+}
+.card,
+.decisionCard,
+.todoCard,
+.ideaCard {
+  position: relative;
+  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-ink);
+}
+.decisionCard {
+  padding-top: var(--space-5);
+  background: var(--color-card-decision);
+  box-shadow: 0 2px 0 var(--color-card-decision-edge), var(--shadow-lift);
+}
+.todoCard {
+  background: var(--color-card-todo);
+  box-shadow: 0 2px 0 var(--color-card-todo-edge), var(--shadow-lift);
+}
+/* suggestions are not facts: a dashed card in their own color */
+.ideaCard {
+  border: 2px dashed var(--color-card-idea-edge);
+  background: var(--color-card-idea);
+  box-shadow: none;
+}
+/* the red pin: only decisions get one */
+.pin {
+  position: absolute;
+  top: -7px;
+  left: 18px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-record);
+  box-shadow: 0 2px 0 var(--color-record-dark);
+}
+
+/* card labels: small, sentence case, tinted per card */
+.heading {
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.decisionCard .heading {
+  color: var(--color-card-decision-ink);
+}
+.todoCard .heading,
+.todoCard .meta {
+  color: var(--color-card-todo-ink);
+}
+.boxHeading {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-card-idea-ink);
 }
 .summary {
   font-size: 19px;
   line-height: 1.6;
 }
-.heading {
-  margin-bottom: var(--space-2);
+.decisionCard .list {
+  font-size: 18px;
+  font-weight: 600;
 }
 .list {
   display: flex;
@@ -24,9 +82,12 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-line);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-card-todo-edge);
   cursor: pointer;
+}
+.item:last-child {
+  border-bottom: none;
 }
 .check {
   flex: none;
@@ -48,21 +109,17 @@
   color: var(--color-ink-muted);
   text-decoration: line-through;
 }
-
-.suggestions {
-  padding: 20px var(--space-5);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
+.todoCard .done {
+  color: var(--color-card-todo-ink);
 }
+
 .boxNote {
   margin: 2px 0 var(--space-3);
   font-size: 14px;
-  color: var(--color-ink-muted);
+  color: var(--color-card-idea-ink);
 }
 
 .disclaimer {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-line);
   font-size: 14px;
   color: var(--color-ink-muted);
 }
@@ -100,7 +157,7 @@
 .textarea {
   min-width: 0;
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-input);
   background: var(--color-bg);
 }
 .input {

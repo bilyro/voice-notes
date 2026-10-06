@@ -81,7 +81,7 @@ export function RecordingsPage() {
           <ul className={styles.rows}>
             {recs.map((r) => (
               <li key={r.id} className={styles.row}>
-                <span className={styles.tile} aria-hidden="true"><ModeIcon mode={r.mode} /></span>
+                <span className={styles.tile} data-mode={r.mode} aria-hidden="true"><ModeIcon mode={r.mode} /></span>
                 <div className={styles.main}>
                   <Link to={`/recordings/${r.id}`} className={styles.title}>{r.title}</Link>
                   <div className={styles.meta}>

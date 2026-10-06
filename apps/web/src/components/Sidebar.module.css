@@ -5,6 +5,7 @@
   gap: var(--space-5);
   padding: var(--space-5) var(--space-4);
   border-right: 1px solid var(--color-line);
+  background: var(--color-surface);   /* warm paper strip beside the board */
 }
 
 /* stacked on top (shell narrower than 240px + 560px): divide with a bottom border instead */
@@ -20,19 +21,16 @@
   align-items: center;
   gap: 10px;
   padding: 0 var(--space-2);
-  font-size: 18px;
-  font-weight: 600;
+  min-height: 44px;
+  font-size: 19px;
+  font-weight: 800;
   text-decoration: none;
 }
 
-.dot {
+.dotOnDark {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-record);
-}
-.dotOnDark {
-  composes: dot;
   background: var(--color-record-on-dark);
 }
 
@@ -47,12 +45,14 @@
   align-items: center;
   gap: var(--space-3);
   min-height: 44px;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
+  padding: 0 12px;
+  border-radius: var(--radius-card);
   text-decoration: none;
 }
+/* the selected page is a white card lying on the paper */
 .navItem[aria-current="page"] {
   background: var(--color-surface-selected);
+  box-shadow: var(--shadow-edge);
   font-weight: 600;
 }
 

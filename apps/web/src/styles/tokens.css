@@ -1,29 +1,55 @@
-/* Design tokens, copied from docs/DESIGN.md section 2. Use only these values. */
+/* Design tokens, copied from docs/DESIGN.md section 2 ("Index cards"). Use only these values. */
 :root {
-  /* color */
-  --color-bg: #FFFFFF;              /* page */
-  --color-surface: #F6F7F8;         /* player, info notes, suggestion box, search field, icon tiles */
-  --color-surface-selected: #EEF0F2;/* active sidebar item */
-  --color-line: #E6E8EB;            /* borders, dividers, inactive pills */
-  --color-track: #DDE0E4;           /* player track */
-  --color-wave-past: #C9CDD2;       /* waveform history bars */
-  --color-ink: #1C2026;             /* text, primary buttons, progress fill */
-  --color-ink-soft: #3E444C;        /* text inside info notes */
-  --color-ink-muted: #5F6670;       /* secondary text, meta, timestamps */
-  --color-record: #D92D20;          /* record button, live dot */
-  --color-record-soft: #FDECEA;     /* ring around record button, "Recording" badge */
+  /* page */
+  --color-board: #E9E4DC;           /* page background (the board) */
+  --color-board-dot: #D6CFC3;       /* the dot grid on the board */
+
+  /* paper */
+  --color-bg: #FFFFFF;              /* cards, inputs, secondary buttons */
+  --color-surface: #F4F0E9;         /* warm paper: sidebar, tab panels, the player track area, info notes */
+  --color-surface-selected: #FFFFFF;/* active sidebar item (a white card) */
+  --color-line: #D6CFC3;            /* borders, dividers, inactive pills */
+  --color-card-edge: #CFC7BA;       /* the 2px bottom edge under white cards */
+  --color-track: #E9E4DC;           /* player and progress tracks */
+  --color-wave-past: #CFC7BA;       /* waveform history bars */
+
+  /* card families: a fill, the edge under it, and the text color on it */
+  --color-card-decision: #FFF1B8;      --color-card-decision-edge: #D9C67E; --color-card-decision-ink: #6B5A1E;
+  --color-card-todo: #D9F2E3;          --color-card-todo-edge: #A9D3BA;     --color-card-todo-ink: #2F5E43;
+  --color-card-idea: #EEEAFB;          --color-card-idea-edge: #9C8BD6;     --color-card-idea-ink: #4B3C8F;
+
+  /* ink */
+  --color-ink: #1F1B16;             /* text, primary buttons, progress fill */
+  --color-ink-soft: #4A433A;        /* body text on cards and notes */
+  --color-ink-muted: #6E655A;       /* secondary text, meta, timestamps (4.6:1 on the board) */
+  --color-pencil: #8A5A2B;          /* handwritten margin notes (decoration only) */
+
+  /* red is for recording (and error text) */
+  --color-record: #D93A2E;          /* record button, live dot, the decision pin */
+  --color-record-dark: #8E2119;     /* shadow under the pin, text on the Recording badge */
+  --color-record-soft: #FBE3DF;     /* ring around record button, "Recording" badge */
   --color-record-on-dark: #FF6B5E;  /* red dot inside the black "New recording" button */
   --color-error: #B42318;           /* error text */
 
-  /* type */
-  --font-sans: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+  --color-tape: #F3E3B5;            /* tape strips on decorative cards */
 
-  /* radius (by size of the element, not one value everywhere) */
-  --radius-sm: 6px;    /* small text buttons */
-  --radius-md: 8px;    /* buttons, inputs, sidebar items */
-  --radius-lg: 10px;   /* search field, info note, list icon tiles, transcript rows */
-  --radius-xl: 12px;   /* suggestion box */
-  --radius-pill: 999px;/* chips, filter pills, audio player */
+  /* type */
+  --font-sans: 'Work Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-hand: 'Caveat', 'Segoe Print', cursive;   /* margin notes only: never content, labels or buttons */
+
+  /* radius (by element) */
+  --radius-card: 4px;  /* every card, list row, the player, tab panels */
+  --radius-sm: 8px;    /* small buttons inside rows and cards */
+  --radius-input: 10px;/* inputs, selects, secondary buttons */
+  --radius-md: 12px;   /* primary buttons, the sidebar "New recording" */
+  --radius-lg: 4px;    /* kept for old call sites: same as a card */
+  --radius-xl: 4px;    /* kept for old call sites: same as a card */
+  --radius-pill: 999px;/* chips and filter pills */
+
+  /* depth: a 2px paper edge, plus a soft lift for cards that sit on the board */
+  --shadow-lift: 0 10px 20px rgba(31, 27, 22, 0.07);
+  --shadow-edge: 0 2px 0 var(--color-card-edge);
+  --shadow-card: var(--shadow-edge), var(--shadow-lift);
 
   /* spacing scale */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;

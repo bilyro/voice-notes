@@ -10,12 +10,17 @@
   max-width: 560px;
 }
 
+/* empty state: one white card on the board */
 .empty {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-4);
   margin-top: var(--space-6);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 .detail {
   max-width: 760px;

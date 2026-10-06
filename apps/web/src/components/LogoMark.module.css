@@ -1,0 +1,39 @@
+.card {
+  flex: none;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  width: 32px;
+  height: 23px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--color-bg);
+  box-shadow: 0 1px 0 var(--color-card-edge);
+  transform: rotate(-6deg);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-record);
+}
+.line,
+.lineLong,
+.lineShort {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-ink);
+}
+.line {
+  flex: 1;
+}
+.lineShort {
+  width: 60%;
+}

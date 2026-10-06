@@ -1,52 +1,30 @@
-/* design canvas, artboard "Landing" (docs/DESIGN.md section 6). Tokens only. */
+/* design canvas, artboard "StyleCorkboard" (docs/DESIGN.md section 6). Tokens only. */
 .page {
   min-height: 100vh;
-  background: var(--color-bg);
 }
 .wrap {
-  max-width: 1120px;
+  max-width: 1160px;
   margin: 0 auto;
   padding-inline: clamp(16px, 4vw, 40px);
 }
 
 /* header */
 .header {
-  border-bottom: 1px solid var(--color-line);
-}
-.headerRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-block: var(--space-4);
+  padding-block: 20px;
 }
 .logo {
   display: flex;
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
   text-decoration: none;
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-record);
-}
-.smallDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-record);
-}
-.dotOnDark {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-record-on-dark);
 }
 .headerNav {
   display: flex;
@@ -63,41 +41,33 @@
   font-weight: 600;
   text-decoration: none;
 }
+.dotOnDark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-record-on-dark);
+}
 
 /* hero */
 .hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-8);
-  padding-block: 88px var(--space-8);
+  padding-block: var(--space-7) var(--space-5);
+  text-align: center;
 }
-.heroText,
-.example {
-  flex: 1 1 420px;
-  min-width: 0;
-}
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 32px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  color: var(--color-ink-muted);
+.heroPencil {
+  font-size: 30px;
+  transform: rotate(-2deg);
 }
 /* "Landing hero" in DESIGN.md section 3 */
 .heroTitle {
-  margin-top: 20px;
-  font-size: 56px;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
+  max-width: 15ch;
+  margin: var(--space-1) auto 0;
+  font-size: 64px;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 .lead {
-  margin-top: 20px;
   max-width: 34em;
+  margin: 18px auto 0;
   font-size: 19px;
   line-height: 1.6;
   color: var(--color-ink-soft);
@@ -105,12 +75,13 @@
 .ctaRow {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: 28px;
 }
 .bigButton {
-  min-height: 48px;
-  padding: 0 22px;
+  min-height: 52px;
+  padding: 0 var(--space-5);
   font-size: 16px;
 }
 .small {
@@ -119,112 +90,143 @@
   color: var(--color-ink-muted);
 }
 
-/* example notes card: the detail page's pieces in miniature */
-.example {
-  margin: 0;
-  padding: var(--space-5);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-xl);
+/* the example cards: decoration, so they may tilt */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));   /* 4 across on desktop, no orphan card */
+  gap: var(--space-6) 28px;
+  align-items: start;
+  padding-block: var(--space-7);
 }
-.player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 52px;
-  padding: 0 var(--space-4) 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  font-size: 14px;
+.card {
+  position: relative;
+  padding: 26px 22px 22px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
-.play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
+.summaryCard {
+  transform: rotate(-1.5deg);
+}
+.decisionCard {
+  background: var(--color-card-decision);
+  box-shadow: 0 2px 0 var(--color-card-decision-edge), var(--shadow-lift);
+  transform: rotate(1.2deg);
+}
+.todoCard {
+  background: var(--color-card-todo);
+  box-shadow: 0 2px 0 var(--color-card-todo-edge), var(--shadow-lift);
+  transform: rotate(-0.6deg);
+}
+.ideaCard {
+  padding-top: 22px;
+  border: 2px dashed var(--color-card-idea-edge);
+  background: var(--color-card-idea);
+  box-shadow: none;
+  transform: rotate(0.8deg);
+}
+.tape,
+.tapeRight {
+  position: absolute;
+  top: -12px;
+  width: 88px;
+  height: 24px;
+  background: var(--color-tape);
+}
+.tape {
+  left: 50%;
+  margin-left: -44px;
+  transform: rotate(3deg);
+}
+.tapeRight {
+  right: var(--space-5);
+  transform: rotate(-4deg);
+}
+.pin {
+  position: absolute;
+  top: -8px;
+  left: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--color-ink);
-  color: var(--color-bg);
+  background: var(--color-record);
+  box-shadow: 0 2px 0 var(--color-record-dark);
 }
-.track {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-track);
-}
-.fill {
-  display: block;
-  width: 38%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-ink);
-}
-.mutedText {
-  color: var(--color-ink-muted);
-}
-.exampleMeta {
-  margin-top: 20px;
+.cardLabel {
+  margin: 0;
   font-size: 14px;
-  color: var(--color-ink-muted);
-}
-.exampleSummary {
-  margin-top: 6px;
-  font-size: 17px;
-  line-height: 1.6;
-}
-.exampleHeading {
-  margin: 20px 0 var(--space-2);
-  font-size: 16px;
   font-weight: 600;
+  color: var(--color-ink-muted);
 }
-.decision {
-  display: flex;
-  gap: var(--space-3);
-  align-items: baseline;
-  justify-content: space-between;
+.decisionCard .cardLabel {
+  color: var(--color-card-decision-ink);
 }
-.decision span:last-child {
+.todoCard .cardLabel,
+.todoCard .owner {
+  color: var(--color-card-todo-ink);
+}
+.ideaCard .cardLabel,
+.ideaNote {
+  color: var(--color-card-idea-ink);
+}
+.cardText {
+  margin-top: var(--space-2);
+  font-size: 18px;
+  line-height: 1.5;
+}
+.cardMeta {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.decisionText {
+  margin-top: var(--space-2);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.saidAt {
+  margin-top: var(--space-3);
+}
+.ideaNote {
+  margin-top: var(--space-1);
   font-size: 14px;
 }
-.actionItems {
+.todoList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 0;
+  gap: var(--space-2);
+  margin: 10px 0 0;
   padding: 0;
   list-style: none;
 }
-.actionItem {
+.todoItem {
   display: flex;
   gap: 10px;
   align-items: flex-start;
   cursor: pointer;
 }
-.actionItem input {
+.todoItem input {
   margin-top: 5px;
   accent-color: var(--color-ink);
 }
-.done {
-  color: var(--color-ink-muted);
-  text-decoration: line-through;
-}
-.itemMeta {
+.owner {
   display: block;
   font-size: 14px;
-  color: var(--color-ink-muted);
+}
+.done {
+  text-decoration: line-through;
+  color: var(--color-card-todo-ink);
 }
 
 /* sections */
-.band {
-  border-top: 1px solid var(--color-line);
-}
-.band > .wrap {
-  padding-block: 72px;
+.section {
+  padding-block: var(--space-8) var(--space-5);
 }
 .sectionTitle {
   font-size: 36px;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 .soft {
   color: var(--color-ink-soft);
@@ -232,73 +234,59 @@
 .steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-5);
-  margin: var(--space-6) 0 0;
+  gap: 20px;
+  margin: var(--space-5) 0 0;
   padding: 0;
   list-style: none;
 }
-.step {
+.stepCard {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.tile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  gap: var(--space-2);
+  padding: 22px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 .stepTitle {
   margin: 0;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 800;
 }
 .modes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-6);
+  gap: 20px;
+  margin-top: var(--space-5);
 }
-.mode {
-  padding: var(--space-5);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
+.modeCard {
+  padding: 22px;
+  border-radius: var(--radius-card);
 }
-.chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
+.toneDecision {
+  background: var(--color-card-decision);
+  box-shadow: 0 2px 0 var(--color-card-decision-edge);
+}
+.toneTodo {
+  background: var(--color-card-todo);
+  box-shadow: 0 2px 0 var(--color-card-todo-edge);
+}
+.toneIdea {
+  background: var(--color-card-idea);
+  box-shadow: 0 2px 0 var(--color-card-idea-edge);
+}
+.modeTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
 }
 .modeList {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: var(--space-4) 0 0;
+  margin: var(--space-3) 0 0;
   padding-left: 20px;
   color: var(--color-ink-soft);
-}
-.suggestion {
-  margin-top: var(--space-5);
-  padding: var(--space-5);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-}
-.suggestionTitle {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-.suggestionLine {
-  margin: var(--space-1) 0 var(--space-3);
-  font-size: 14px;
-  color: var(--color-ink-muted);
 }
 .plan {
   display: flex;
@@ -310,7 +298,7 @@
   min-width: 0;
 }
 .planText .lead {
-  margin-top: var(--space-4);
+  margin: var(--space-4) 0 0;
 }
 .planNote {
   flex: 1 1 360px;
@@ -322,6 +310,7 @@
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  padding-block: var(--space-8) 72px;
   text-align: center;
 }
 /* the app's record button (DESIGN.md: RecordButton, 84px + soft ring) as a decoration */
@@ -345,14 +334,12 @@
 
 /* footer */
 .footer {
-  border-top: 1px solid var(--color-line);
-}
-.footerRow {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-3);
   padding-block: var(--space-5);
+  border-top: 1px solid var(--color-line);
   font-size: 13px;
   color: var(--color-ink-muted);
 }
@@ -363,17 +350,13 @@
 }
 
 @media (max-width: 600px) {
-  .hero {
-    padding-block: var(--space-7) var(--space-7);
-    gap: var(--space-6);
-  }
   .heroTitle {
     font-size: 40px;
   }
-  .band > .wrap {
-    padding-block: var(--space-8);
-  }
   .sectionTitle {
     font-size: 24px;   /* "Phone title" in DESIGN.md section 3 */
+  }
+  .section {
+    padding-block: var(--space-7) var(--space-4);
   }
 }

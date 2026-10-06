@@ -44,7 +44,7 @@ export function Tabs<T extends string>({ label, tabs, value, onChange, children 
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`panel-${value}`} aria-labelledby={`tab-${value}`}>
+      <div role="tabpanel" id={`panel-${value}`} aria-labelledby={`tab-${value}`} className={styles.panel}>
         {children}
       </div>
     </>

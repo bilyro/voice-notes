@@ -8,9 +8,9 @@ import { AuthLayout } from "./AuthLayout";
 import styles from "./Auth.module.css";
 
 const STEPS = [
-  { title: "Record in the browser", text: "Meetings, lessons or quick voice memos. Nothing to install.", icon: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><path d="M12 18v3" /></> },
-  { title: "Get the transcript", text: "Every line has a timestamp that plays the audio from there.", icon: <><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h10" /></> },
-  { title: "Use the notes", text: "Summary, decisions and action items, ready to edit or copy.", icon: <><rect x="3.5" y="3.5" width="17" height="17" rx="4" /><path d="M8 12l3 3 5-6" /></> },
+  { title: "Record in the browser", text: "Meetings, lessons or quick voice memos. Nothing to install." },
+  { title: "Get the transcript", text: "Every line has a timestamp that plays the audio from there." },
+  { title: "Use the notes", text: "Summary, decisions and action items, ready to edit or copy." },
 ];
 
 export function SignUpPage() {
@@ -68,24 +68,23 @@ export function SignUpPage() {
   );
 }
 
-/** Left panel: what you get, plus the free-plan notice. */
+/** Left side: what you get, as cards on the board, plus the free-plan notice. */
 function Steps() {
+  const looks = [styles.decisionCard, styles.todoCard, styles.paperCard];
   return (
-    <ol className={styles.steps}>
-      {STEPS.map((s) => (
-        <li key={s.title} className={styles.step}>
-          <span className={styles.tile} aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{s.icon}</svg>
-          </span>
-          <span>
-            <strong className={styles.stepTitle}>{s.title}</strong>
-            <span className={styles.stepText}>{s.text}</span>
-          </span>
-        </li>
+    <>
+      <p className={`pencil ${styles.pencilNote}`} aria-hidden="true">what you get:</p>
+      {STEPS.map((s, i) => (
+        <div key={s.title} className={looks[i]}>
+          {i === 0 && <span className={styles.pin} aria-hidden="true" />}
+          {i === 2 && <span className={styles.tape} aria-hidden="true" />}
+          <strong className={styles.stepTitle}>{s.title}</strong>
+          <span className={styles.stepText}>{s.text}</span>
+        </div>
       ))}
-      <li className={styles.freeNote}>
+      <p className={styles.freeNote}>
         <strong>Free plan:</strong> recordings are processed by a free service with no privacy guarantee. Use it for test recordings.
-      </li>
-    </ol>
+      </p>
+    </>
   );
 }
