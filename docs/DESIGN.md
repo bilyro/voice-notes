@@ -69,6 +69,7 @@ All numbers that change (timers, timestamps, durations, minutes used) use `font-
 | Meta, secondary | 14px | color `--color-ink-muted` |
 | Small labels (sidebar footer) | 13px | |
 | Phone timer | 84px / 500 | letter-spacing −0.03em, tabular numbers |
+| Landing hero (landing page h1 only) | 56px / 600 | letter-spacing −0.025em, line-height 1.05; 40px at phone width. Landing section titles use the page title size (36px), the phone title size (24px) on a phone |
 
 Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("Start recording", "Stop and save", "Try again", "Copy as Markdown").
 
@@ -100,6 +101,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | `TimestampLink` | muted 14px tabular link ("0:46") that seeks the player |
 | `InfoNote` | grey surface, radius lg, 14px `--color-ink-soft` text (Free plan notice) |
 | `SuggestionBox` | grey surface, radius xl, heading + the fixed "Ideas from the assistant…" line |
+| App icon | "Recorded note": `--color-ink` tile, red record dot as the first bullet, three white note lines (`apps/web/public/favicon.svg`, rounded; `apple-touch-icon.png` 180px, square and opaque because iOS rounds it). Design canvas, artboard `AppIcon`, option A |
 | `TranscriptRow` | grid: 52px timestamp + (speaker 14px/600, text 16px); currently playing row gets `--color-surface` background and ink timestamp |
 
 ## 6. Screens
@@ -111,6 +113,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | Recording in progress | `screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop) | Task 1.11 (web), Phase 4 (native app) |
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |
 | Recording detail (Notes / Transcript tabs) | `screens/RecordingDetail.dc.html` | Task 1.13, buttons in 1.14 |
+| Landing page (`/` when signed out): header, hero + example notes card, how it works, modes + suggestion box, free plan, final call to action, footer | design canvas, artboard `Landing` | Task 1.18 |
 | Recording detail: delete (secondary "Delete" at the end of the actions row, every status; inline grey confirmation with black "Delete recording" + "Keep it", no modal) | design canvas, artboard `DeleteRecording` | Task 1.17 |
 
 Some things in the mockups arrive later. Show them only when their task is built:

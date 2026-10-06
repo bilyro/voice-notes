@@ -1,0 +1,379 @@
+/* design canvas, artboard "Landing" (docs/DESIGN.md section 6). Tokens only. */
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+}
+
+/* header */
+.header {
+  border-bottom: 1px solid var(--color-line);
+}
+.headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 18px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-record);
+}
+.smallDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-record);
+}
+.dotOnDark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-record-on-dark);
+}
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* hero */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  padding-block: 88px var(--space-8);
+}
+.heroText,
+.example {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+/* "Landing hero" in DESIGN.md section 3 */
+.heroTitle {
+  margin-top: 20px;
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.lead {
+  margin-top: 20px;
+  max-width: 34em;
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--color-ink-soft);
+}
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+.bigButton {
+  min-height: 48px;
+  padding: 0 22px;
+  font-size: 16px;
+}
+.small {
+  margin-top: var(--space-4);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+/* example notes card: the detail page's pieces in miniature */
+.example {
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+}
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: 0 var(--space-4) 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 14px;
+}
+.play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+.track {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-track);
+}
+.fill {
+  display: block;
+  width: 38%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-ink);
+}
+.mutedText {
+  color: var(--color-ink-muted);
+}
+.exampleMeta {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.exampleSummary {
+  margin-top: 6px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.exampleHeading {
+  margin: 20px 0 var(--space-2);
+  font-size: 16px;
+  font-weight: 600;
+}
+.decision {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+.decision span:last-child {
+  font-size: 14px;
+}
+.actionItems {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.actionItem {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.actionItem input {
+  margin-top: 5px;
+  accent-color: var(--color-ink);
+}
+.done {
+  color: var(--color-ink-muted);
+  text-decoration: line-through;
+}
+.itemMeta {
+  display: block;
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+/* sections */
+.band {
+  border-top: 1px solid var(--color-line);
+}
+.band > .wrap {
+  padding-block: 72px;
+}
+.sectionTitle {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.soft {
+  color: var(--color-ink-soft);
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.stepTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+.mode {
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+.modeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: var(--space-4) 0 0;
+  padding-left: 20px;
+  color: var(--color-ink-soft);
+}
+.suggestion {
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+}
+.suggestionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.suggestionLine {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6) var(--space-8);
+}
+.planText {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.planText .lead {
+  margin-top: var(--space-4);
+}
+.planNote {
+  flex: 1 1 360px;
+  min-width: 0;
+  align-self: center;
+}
+.finalCta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+/* the app's record button (DESIGN.md: RecordButton, 84px + soft ring) as a decoration */
+.recordButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin-bottom: var(--space-3);
+  border-radius: 50%;
+  background: var(--color-record);
+  box-shadow: 0 0 0 9px var(--color-record-soft);
+}
+.recordButton span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+/* footer */
+.footer {
+  border-top: 1px solid var(--color-line);
+}
+.footerRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+.footerLogo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding-block: var(--space-7) var(--space-7);
+    gap: var(--space-6);
+  }
+  .heroTitle {
+    font-size: 40px;
+  }
+  .band > .wrap {
+    padding-block: var(--space-8);
+  }
+  .sectionTitle {
+    font-size: 24px;   /* "Phone title" in DESIGN.md section 3 */
+  }
+}
