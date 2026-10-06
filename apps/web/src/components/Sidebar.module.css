@@ -19,12 +19,18 @@
 .logo {
   display: flex;
   align-items: center;
+  align-self: flex-start;
   gap: 10px;
   padding: 0 var(--space-2);
   min-height: 44px;
+  border-radius: var(--radius-sm);
   font-size: 19px;
   font-weight: 800;
   text-decoration: none;
+}
+/* the logo is not a text link: keep the ink on hover */
+.logo:hover {
+  color: var(--color-ink);
 }
 
 .dotOnDark {
@@ -56,19 +62,106 @@
   font-weight: 600;
 }
 
-.footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: 0 var(--space-2);
+.count {
+  margin-left: auto;
   font-size: 13px;
+  font-weight: 400;
+  color: var(--color-ink-muted);
 }
 
-.email {
-  max-width: 100%;
+/* Recent: the 3 newest recordings as mini cards, edged in their mode color */
+.recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.recentTitle {
+  margin-bottom: 2px;
+  padding: 0 var(--space-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.recentCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 44px;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: inset 4px 0 0 var(--color-card-edge), var(--shadow-edge);
+  text-decoration: none;
+}
+.recentCard[data-mode="meeting"] { box-shadow: inset 4px 0 0 var(--color-card-decision-edge), var(--shadow-edge); }
+.recentCard[data-mode="lesson"] { box-shadow: inset 4px 0 0 var(--color-card-todo-edge), var(--shadow-edge); }
+.recentCard[data-mode="memo"] { box-shadow: inset 4px 0 0 var(--color-card-idea-edge), var(--shadow-edge); }
+.recentCard:hover {
+  color: var(--color-ink);
+}
+.recentCard[aria-current="page"] {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+.recentName {
   overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.recentMeta {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* account card at the bottom */
+.account {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
+}
+.avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-card-decision);
+  font-size: 13px;
+  font-weight: 800;
+}
+.email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signOut {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+/* phone: the sidebar sits above the page, so keep it short */
+@media (max-width: 799px) {
+  .recent {
+    display: none;
+  }
 }

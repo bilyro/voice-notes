@@ -115,7 +115,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 
 | Component | Look |
 |---|---|
-| `Sidebar` | warm paper (`--color-surface`) with a line on the right; `LogoMark` (tilted white card with the red dot) + "Voice notes" 19/800; black "New recording" button; nav item selected = white card with the paper edge; footer with email + Sign out (minutes meter later) |
+| `Sidebar` | warm paper (`--color-surface`) with a line on the right. Top to bottom: `LogoMark` + "Voice notes" 19/800 linking to `/about` (keeps ink on hover, rounded focus outline); black "New recording"; nav "All recordings" + count (selected = white card with the paper edge); "Recent": the 3 newest recordings as mini white cards with a 4px left edge in the mode's card-edge color, title 14/600 + "Mode · Day" or the processing step, current one outlined; account card at the bottom (initials circle in decision yellow, email with ellipsis, 36px "Sign out" icon button). On a phone (stacked) Recent is hidden. Design canvas, "Sidebar: 3 options", option A |
 | `Button` primary | black fill, white text, radius md (12), 44px (48–52 on landing / auth) |
 | `Button` secondary | white, 1px `--color-line` border, radius input (10), 40px, icon + label |
 | `IconButton` | 40px square, same as secondary, `aria-label` required |
@@ -147,6 +147,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |
 | Recording detail (Notes / Transcript tabs) | `screens/RecordingDetail.dc.html` | Task 1.13, buttons in 1.14 |
 | Sign in / Create account: form column on the right (max 400px, logo links to `/`), grey panel on the left (example notes / the 3 steps + free-plan note), stacking under the form on a phone; Show/Hide password; errors are red text only | design canvas, artboards `SignIn`, `SignUp` | Task 1.19 |
+| About (`/about`, everyone): the landing page; signed in, the header shows "Open my recordings" and the hero / final buttons become "New recording" and "Open my recordings" | design canvas, `StyleCorkboard` | Task 1.21 |
 | Landing page (`/` when signed out): header, hero + example notes card, how it works, modes + suggestion box, free plan, final call to action, footer | design canvas, artboard `Landing` | Task 1.18 |
 | Recording detail: delete (secondary "Delete" at the end of the actions row, every status; inline grey confirmation with black "Delete recording" + "Keep it", no modal) | design canvas, artboard `DeleteRecording` | Task 1.17 |
 

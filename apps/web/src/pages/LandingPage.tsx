@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { ButtonLink } from "../components/Button";
 import { InfoNote } from "../components/InfoNote";
 import { LogoMark } from "../components/LogoMark";
+import { authClient } from "../lib/auth-client";
 import styles from "./LandingPage.module.css";
 
 const STEPS = [
@@ -18,6 +19,10 @@ const MODES = [
 ];
 
 export function LandingPage() {
+  // signed in (e.g. via the sidebar logo → /about): point the buttons into the app instead of sign-up
+  const { data: session } = authClient.useSession();
+  const signedIn = !!session;
+
   return (
     <div className={styles.page}>
       <header className={`${styles.wrap} ${styles.header}`}>
@@ -26,8 +31,14 @@ export function LandingPage() {
           Voice notes
         </Link>
         <nav aria-label="Account" className={styles.headerNav}>
-          <Link to="/login" className={styles.textButton}>Sign in</Link>
-          <ButtonLink to="/signup">Create account</ButtonLink>
+          {signedIn ? (
+            <ButtonLink to="/">Open my recordings</ButtonLink>
+          ) : (
+            <>
+              <Link to="/login" className={styles.textButton}>Sign in</Link>
+              <ButtonLink to="/signup">Create account</ButtonLink>
+            </>
+          )}
         </nav>
       </header>
 
@@ -40,11 +51,13 @@ export function LandingPage() {
             moment it was said.
           </p>
           <div className={styles.ctaRow}>
-            <ButtonLink to="/signup" className={styles.bigButton}>
+            <ButtonLink to={signedIn ? "/record" : "/signup"} className={styles.bigButton}>
               <span className={styles.dotOnDark} aria-hidden="true" />
-              Start recording for free
+              {signedIn ? "New recording" : "Start recording for free"}
             </ButtonLink>
-            <ButtonLink to="/login" variant="secondary" className={styles.bigButton}>I have an account</ButtonLink>
+            <ButtonLink to={signedIn ? "/" : "/login"} variant="secondary" className={styles.bigButton}>
+              {signedIn ? "Open my recordings" : "I have an account"}
+            </ButtonLink>
           </div>
           <p className={styles.small}>Works in your browser, on a laptop or a phone. English only for now.</p>
         </section>
@@ -95,7 +108,9 @@ export function LandingPage() {
         <section aria-labelledby="cta-title" className={`${styles.wrap} ${styles.finalCta}`}>
           <span className={styles.recordButton} aria-hidden="true"><span /></span>
           <h2 id="cta-title" className={styles.sectionTitle}>Your next meeting writes its own cards</h2>
-          <ButtonLink to="/signup" className={styles.bigButton}>Create a free account</ButtonLink>
+          <ButtonLink to={signedIn ? "/record" : "/signup"} className={styles.bigButton}>
+            {signedIn ? "New recording" : "Create a free account"}
+          </ButtonLink>
         </section>
       </main>
 

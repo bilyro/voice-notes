@@ -1,23 +1,55 @@
 import { Link, NavLink, useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import type { Recording, RecordingMode } from "@vn/shared";
 import { authClient } from "../lib/auth-client";
-import { Button, ButtonLink } from "./Button";
+import { api } from "../lib/api";
+import { ButtonLink } from "./Button";
 import { LogoMark } from "./LogoMark";
 import styles from "./Sidebar.module.css";
 
-// Only Recordings and New recording for now. Action items, Settings and the
+const MODE_LABEL: Record<RecordingMode, string> = { meeting: "Meeting", lesson: "Lesson", memo: "Voice memo" };
+const PROCESSING: Recording["status"][] = ["uploaded", "transcribing", "summarizing"];
+
+/** "Meeting · Thu", or the step while it is still being processed. */
+function recentMeta(r: Recording) {
+  if (r.status === "summarizing") return "Writing notes…";
+  if (r.status === "uploaded" || r.status === "transcribing") return "Transcribing…";
+  if (r.status === "recording") return "Not finished";
+  if (r.status === "failed") return "Processing failed";
+  return `${MODE_LABEL[r.mode]} · ${new Date(r.createdAt).toLocaleDateString("en-US", { weekday: "short" })}`;
+}
+
+/** "Dana Ortiz" → "DO", "dana@school.org" → "DA" */
+function initials(name: string | undefined, email: string | undefined) {
+  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0]![0]! + words[1]![0]!).toUpperCase();
+  return (words[0] ?? email ?? "?").slice(0, 2).toUpperCase();
+}
+
+// Design canvas, "Sidebar: 3 options", option A. Action items, Settings and the
 // minutes meter arrive with their tasks (docs/DESIGN.md section 6).
 export function Sidebar() {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
+  const { data: session, refetch: refetchSession } = authClient.useSession();
+  // the same query (and cache) as the Recordings page; polls only while something is processing
+  const { data: recordings } = useQuery({
+    queryKey: ["recordings"],
+    queryFn: () => api<Recording[]>("/recordings"),
+    refetchInterval: (q) => (q.state.data?.some((r) => PROCESSING.includes(r.status)) ? 3000 : false),
+  });
+  const recent = recordings?.slice(0, 3) ?? [];   // the API returns newest first
 
   async function signOut() {
     await authClient.signOut();
+    // clear the shared session store first: /login sends signed-in visitors on to "/", and the old
+    // session would otherwise still be cached there (you'd land on the landing page instead)
+    await refetchSession();
     navigate("/login", { replace: true });
   }
 
   return (
     <aside className={styles.sidebar}>
-      <Link to="/" className={styles.logo}>
+      <Link to="/about" className={styles.logo} title="About Voice notes">
         <LogoMark />
         Voice notes
       </Link>
@@ -29,19 +61,33 @@ export function Sidebar() {
 
       <nav aria-label="Main" className={styles.nav}>
         <NavLink to="/" end className={styles.navItem}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <rect x="4" y="5" width="16" height="12" rx="1.5" />
-            <path d="M7 20h10" />
-          </svg>
-          Recordings
+          All recordings
+          {recordings && <span className={styles.count}>{recordings.length}</span>}
         </NavLink>
       </nav>
 
-      <div className={styles.footer}>
-        <span className={`muted ${styles.email}`}>{session?.user.email}</span>
-        <Button variant="secondary" size="small" onClick={signOut}>
-          Sign out
-        </Button>
+      {recent.length > 0 && (
+        <section aria-labelledby="sidebar-recent" className={styles.recent}>
+          <h2 id="sidebar-recent" className={styles.recentTitle}>Recent</h2>
+          {recent.map((r) => (
+            <NavLink key={r.id} to={`/recordings/${r.id}`} className={styles.recentCard} data-mode={r.mode}>
+              <span className={styles.recentName}>{r.title}</span>
+              <span className={styles.recentMeta}>{recentMeta(r)}</span>
+            </NavLink>
+          ))}
+        </section>
+      )}
+
+      <div className={styles.account}>
+        <span className={styles.avatar} aria-hidden="true">{initials(session?.user.name, session?.user.email)}</span>
+        <span className={styles.email}>{session?.user.email}</span>
+        <button type="button" className={styles.signOut} aria-label="Sign out" title="Sign out" onClick={signOut}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 4h4v16h-4" />
+            <path d="M10 8l-4 4 4 4" />
+            <path d="M6 12h10" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
