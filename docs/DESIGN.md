@@ -111,6 +111,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | Recording in progress | `screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop) | Task 1.11 (web), Phase 4 (native app) |
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |
 | Recording detail (Notes / Transcript tabs) | `screens/RecordingDetail.dc.html` | Task 1.13, buttons in 1.14 |
+| Recording detail: delete (secondary "Delete" at the end of the actions row, every status; inline grey confirmation with black "Delete recording" + "Keep it", no modal) | design canvas, artboard `DeleteRecording` | Task 1.17 |
 
 Some things in the mockups arrive later. Show them only when their task is built:
 search (Phase 2), Action items page (Phase 2), Settings, minutes-used meter (Task 1b.4), "Assign" button (Phase 2).

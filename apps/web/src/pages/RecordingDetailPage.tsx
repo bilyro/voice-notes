@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
@@ -47,6 +47,10 @@ export function RecordingDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const deleteButton = useRef<HTMLButtonElement>(null);
+  const confirmPanel = useRef<HTMLElement>(null);
 
   const { data, error } = useQuery({
     queryKey: key,
@@ -88,6 +92,30 @@ export function RecordingDetailPage() {
     mutationFn: () => api(`/recordings/${id}/retry`, { method: "POST" }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   });
+
+  const remove = useMutation({
+    mutationFn: () => api(`/recordings/${id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      // stop polling first, or a refetch of the deleted recording would flash "not found"
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<Recording[]>(["recordings"], (list) => list?.filter((r) => r.id !== id));
+      navigate("/", { replace: true });
+      queryClient.removeQueries({ queryKey: key });
+      queryClient.removeQueries({ queryKey: ["recording-audio", id] });
+      void queryClient.invalidateQueries({ queryKey: ["recordings"] });
+    },
+  });
+
+  // the confirmation takes focus when it opens, so keyboard and screen-reader users land on the question
+  useEffect(() => {
+    if (confirming) confirmPanel.current?.focus();
+  }, [confirming]);
+
+  function closeConfirm() {
+    setConfirming(false);
+    remove.reset();
+    deleteButton.current?.focus();
+  }
 
   if (error) {
     return (
@@ -135,22 +163,57 @@ export function RecordingDetailPage() {
         {rec.durationMs !== null && <span className="tabular">{longDuration(rec.durationMs)}</span>}
       </div>
 
-      {rec.status === "ready" && notes && !editing && (
-        <div className={styles.actions}>
-          {/* More actions (delete) arrives in Task 1.15 */}
-          <Button variant="secondary" onClick={copyMarkdown}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
-            {copy === "copied" ? "Copied" : "Copy as Markdown"}
-          </Button>
-          <Button variant="secondary" onClick={downloadMarkdown}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg>
-            Download .md
-          </Button>
-          <Button variant="secondary" onClick={() => { setTab("notes"); setEditing(true); }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
-            Edit notes
-          </Button>
-        </div>
+      <div className={styles.actions}>
+        {rec.status === "ready" && notes && !editing && (
+          <>
+            <Button variant="secondary" onClick={copyMarkdown}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+              {copy === "copied" ? "Copied" : "Copy as Markdown"}
+            </Button>
+            <Button variant="secondary" onClick={downloadMarkdown}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg>
+              Download .md
+            </Button>
+            <Button variant="secondary" onClick={() => { setTab("notes"); setEditing(true); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
+              Edit notes
+            </Button>
+          </>
+        )}
+        {/* every status can be deleted: a failed or stuck recording should not stay forever */}
+        <Button
+          ref={deleteButton}
+          variant="secondary"
+          className={styles.deleteButton}
+          aria-expanded={confirming}
+          aria-controls="confirm-delete"
+          onClick={() => (confirming ? closeConfirm() : setConfirming(true))}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M6 7l1 13h10l1-13" /><path d="M9 7V4h6v3" /></svg>
+          Delete
+        </Button>
+      </div>
+
+      {confirming && (
+        <section
+          id="confirm-delete"
+          ref={confirmPanel}
+          tabIndex={-1}
+          aria-labelledby="confirm-delete-title"
+          className={styles.confirm}
+          onKeyDown={(e) => { if (e.key === "Escape" && !remove.isPending) closeConfirm(); }}
+        >
+          <h2 id="confirm-delete-title" className={styles.confirmTitle}>Delete “{rec.title}”?</h2>
+          <p className={styles.confirmText}>The audio, transcript and notes are removed for good. This can’t be undone.</p>
+          {remove.error && <p className={styles.error} role="alert">{remove.error.message}</p>}
+          <div className={styles.confirmButtons}>
+            {/* black, not red: red is reserved for recording and error text (DESIGN.md §1) */}
+            <Button onClick={() => remove.mutate()} disabled={remove.isPending}>
+              {remove.isPending ? "Deleting…" : "Delete recording"}
+            </Button>
+            <Button variant="secondary" onClick={closeConfirm} disabled={remove.isPending}>Keep it</Button>
+          </div>
+        </section>
       )}
 
       <p className={`visually-hidden`} role="status">{copy === "copied" ? "Notes copied as Markdown" : ""}</p>

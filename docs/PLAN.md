@@ -1651,6 +1651,39 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [ ] **Verify:** open `https://<name>.duckdns.org` on your phone → sign up → record 1 minute → notes appear; the audio player works.
 - [x] **Commit:** `chore: free production deployment with docker compose and caddy`
 
+> Tasks 1.17–1.19 were added after 1.16 was prepared, and are built **before** the app goes online, so the first deploy already has them. Mockups: the second row of the design canvas (`Landing`, `SignIn`, `SignUp`, `DeleteRecording`). They use only the DESIGN.md tokens.
+
+### Task 1.17 — Delete a recording from the detail page
+- [x] **Files:** `apps/web/src/pages/RecordingDetailPage.tsx` (+ its CSS module), `docs/DESIGN.md`
+- [x] A secondary **Delete** button (trash icon) at the end of the actions row, shown for **every** status (ready, processing and failed), not only when notes are ready.
+- [x] Clicking it opens an inline confirmation below the row (grey surface, radius lg, `aria-expanded`/`aria-controls` on the button): "Delete “{title}”?", "The audio, transcript and notes are removed for good. This can’t be undone.", primary **Delete recording** + secondary **Keep it**. Focus moves into the panel; Escape and **Keep it** close it and return focus to **Delete**.
+- [x] Confirm → `DELETE /api/recordings/:id` (Task 1.15) → remove the recording from the TanStack Query cache, invalidate the list, `navigate("/", { replace: true })`. While pending the button says "Deleting…" and is disabled; on error show the API message in error text and keep the panel open.
+- [x] Red stays reserved (DESIGN.md §1): the destructive button is the normal black primary button; the warning is in the copy.
+- [x] DESIGN.md: add "Recording detail: delete" to the screens table (§6).
+- [x] **Verify:** delete a ready, a processing and a failed recording → each lands on the list without it; reloading `/recordings/:id` shows "This recording does not exist or was deleted."; storage has no objects under its prefix. Keyboard only: Tab to Delete, Enter, Tab to Keep it, Escape returns focus.
+- [x] **As built:** `Button` now takes `ComponentProps<"button">` instead of `ButtonHTMLAttributes`, so it accepts `ref` (React 19 passes it as a normal prop); that is how focus returns to Delete. The panel is a focusable `<section tabIndex={-1}>` labelled by its question, so the first Tab lands on "Delete recording". On success the page cancels its 2-second polling **before** navigating (otherwise a refetch of the deleted id flashes "not found"), drops the row from the cached list at once, then removes the detail and audio-URL queries. Verified in headless Chrome: 23 checks (keyboard path, `aria-expanded`, copy, black primary, list and reload) plus storage and database empty for all three recordings.
+- [x] **Commit:** `feat(web): delete a recording from the detail page`
+
+### Task 1.18 — Landing page
+- [ ] **Files:** `apps/web/src/pages/LandingPage.tsx` (+ CSS module), `apps/web/src/router.tsx`, `apps/web/public/favicon.svg`, `apps/web/public/apple-touch-icon.png`, `apps/web/index.html`, `apps/web/src/components/RequireAuth.tsx`, `docs/DESIGN.md`
+- [ ] Routing: `/` shows the **landing page when signed out** and the recordings list when signed in (one `HomeRoute` that reads the session, so existing links to `/` keep working). Signed-out visits to app pages still go to `/login`. Unknown paths redirect to `/` instead of React Router's developer error page.
+- [ ] Sections as in the `Landing` mockup: header (logo, Sign in, Create account) → hero ("Record the conversation. Get the notes.", primary "Start recording for free" → `/signup`, secondary "I have an account" → `/login`, "English only for now") with an example-notes card built from real components (player look, decision with timestamp, action items) → How it works (3 steps) → modes (Meeting, Lesson, Voice memo, and the "Suggested next steps" box) → Free plan (600 minutes, the privacy note from `InfoNote`) → final call to action → footer.
+- [ ] No invented numbers, logos or testimonials. The minutes figure comes from `MONTHLY_MINUTES_LIMIT` only if the page can read it without signing in; otherwise the copy says "a monthly limit".
+- [ ] DESIGN.md: add the landing page to §6, and a "Landing hero" row to §3 (56px / 600, letter-spacing −0.025em, line-height 1.05; 40px at phone width). This is a type size, not a new token.
+- [ ] App icon (option A on the canvas, "Recorded note"): `public/favicon.svg` (rounded tile) and `public/apple-touch-icon.png` (180px, square, no transparency: iOS rounds it), linked from `index.html`. DESIGN.md: add an "App icon" row to §5.
+- [ ] **Verify:** signed out, `/` shows the landing page and both buttons reach the right page; signed in, `/` shows Recordings; `/nope` redirects to `/`. At 375px wide nothing scrolls sideways and the header buttons stay 44px.
+- [ ] **Commit:** `feat(web): landing page`
+
+### Task 1.19 — Better sign-in and sign-up
+- [ ] **Files:** `apps/web/src/pages/AuthLayout.tsx`, `LoginPage.tsx`, `SignUpPage.tsx`, `Auth.module.css`, `apps/web/src/components/PasswordField.tsx` (new), `docs/DESIGN.md`
+- [ ] Layout as in the `SignIn` / `SignUp` mockups: a grey panel on the **left** (example notes on sign in; the 3 steps + free-plan note on sign up) and the form column on the **right** (logo links to `/`, h1, one-line subtitle, max 400px). The form comes first in the HTML and the row uses `flex-direction: row-reverse`, so on a phone the form is on top and the panel below; screen readers and Tab reach the form first.
+- [ ] `PasswordField`: Show/Hide button (`aria-pressed`), sign up shows "At least 8 characters" as `aria-describedby` hint that gets a check icon when met.
+- [ ] Clear errors by Better Auth error **code**, with the message as fallback: wrong email or password → "That email and password don’t match an account. Check them, or create an account."; existing email on sign up → "An account with this email already exists." + "Sign in instead" link. Errors are `role="alert"` error text; inputs keep the normal border (red is text only).
+- [ ] After sign-in, return to the page the user came from (`RequireAuth` passes it in location state), else `/`. A signed-in user who opens `/login` or `/signup` goes to `/`.
+- [ ] DESIGN.md: move sign-in / sign-up from "Not designed yet" to §6.
+- [ ] **Verify:** wrong password shows the new message; duplicate sign-up shows the link; opening `/recordings/<id>` signed out → sign in → you land on that recording. Password managers fill both forms (`autocomplete` set).
+- [ ] **Commit:** `feat(web): clearer sign-in and sign-up`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [ ] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [ ] Lesson mode produces concepts + review questions; memo mode produces ideas.

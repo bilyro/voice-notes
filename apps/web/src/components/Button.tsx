@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps } from "react";
 import { Link, type LinkProps } from "react-router";
 import styles from "./Button.module.css";
 
@@ -20,7 +20,8 @@ function classes({ variant = "primary", size = "default", block = false }: Look,
     .join(" ");
 }
 
-export function Button({ variant, size, block, className, ...props }: Look & ButtonHTMLAttributes<HTMLButtonElement>) {
+// ComponentProps includes `ref` (React 19 passes it as a normal prop), so callers can focus the button
+export function Button({ variant, size, block, className, ...props }: Look & ComponentProps<"button">) {
   return <button className={classes({ variant, size, block }, className)} {...props} />;
 }
 
