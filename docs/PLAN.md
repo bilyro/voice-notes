@@ -1714,15 +1714,21 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **Commit:** `feat(web): sidebar with recent recordings and an about page`
 
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
-- [ ] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
-- [ ] Lesson mode produces concepts + review questions; memo mode produces ideas.
-- [ ] Proposals are specific to the content, not generic advice.
-- [ ] Network drop during recording does not lose audio.
-- [ ] A recording **> 60 minutes** completes (map → reduce path is used).
-- [ ] Another user cannot open your recording by guessing the URL.
-- [ ] `pnpm turbo lint typecheck test` is green.
-- [ ] Everything above works with `STT_PROVIDER=groq` and `NOTES_PROVIDER=groq` — **total cost $0**.
+- [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
+- [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
+- [x] Proposals are specific to the content, not generic advice.
+- [x] Network drop during recording does not lose audio.
+- [x] A recording **> 60 minutes** completes (map → reduce path is used).
+- [x] Another user cannot open your recording by guessing the URL.
+- [x] `pnpm turbo lint typecheck test` is green.
+- [x] Everything above works with `STT_PROVIDER=groq` and `NOTES_PROVIDER=groq` — **total cost $0**.
 - [ ] The app is online at `https://<your-name>.duckdns.org` (Task 1.16) and recording works from your phone's browser.
+- **As built (2026-10-07, local, free stack):** checks 1–8 pass; the checklist with results is in the README. Speech came from macOS voices: played into Chrome as the microphone for the 5:22 meeting with two network drops, uploaded in 10 s chunks for the lesson, the memo and a 61.6-minute 40-item meeting. Check 9 waits for Task 1.16. Findings, not fixed here:
+  - After a drop longer than about 30 s, one chunk gives up after its 5 tries, so Stop shows "Some audio could not be uploaded" and the user must click **Try again**. No audio is lost, but the Record page promises "Audio uploads when you are back online", and "Saved up to" counts uploaded chunks, so it doesn't show the gap.
+  - Due dates get an invented year: "by May second" is saved as `2024-05-02`. The prompt doesn't say to keep the date as said, and the model doesn't know today's date.
+  - Another user's recording URL shows a blank page for about 7 s before "This recording does not exist", because the query retries the 404 three times.
+  - The API tests share Redis queues with the dev worker and fail while it runs (an old worker had been left running for 15 h).
+  - Minor: one merged proposal called a resolved item "unresolved"; in memo mode one idea (the repair café) went into key points instead of ideas.
 
 ---
 
