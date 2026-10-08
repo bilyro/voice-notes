@@ -1713,6 +1713,43 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **As built:** `/about` renders the same `LandingPage`, which reads the session and swaps its buttons; the landing header logo still links to `/`. The sidebar shares the `["recordings"]` query with the list page and polls only while something is processing; Recent cards are `NavLink`s, so `aria-current` comes for free. Initials come from the user's name ("T120" → "T1"), else the email. Found and fixed a bug from Task 1.19: Sign out navigated to `/login` while the session was still cached, so the login page forwarded to `/` and you landed on the landing page; the sidebar now refetches the session before navigating (the same pattern sign-in uses). One old check changed on purpose: the nav item reads "All recordings" + count instead of "Recordings". Verified in headless Chrome: 18 new checks (signed-out and signed-in `/about`, count = list length, the 3 newest with their edge colors, initials, logo hover keeps ink, Recent opens and marks the recording, "Open my recordings" back to the list, phone: Recent hidden and no sideways scroll, Sign out lands on `/login`) plus the Task 1.17–1.20 suites (108 checks) and CI.
 - [x] **Commit:** `feat(web): sidebar with recent recordings and an about page`
 
+> Tasks 1.22–1.25 fix the findings of the Phase 1 acceptance test (see its "As built" note below).
+
+### Task 1.22 — Uploads survive long network drops
+> After a drop longer than about 30 s, a chunk gave up after 5 tries, and Stop asked the user to click **Try again**. "Saved up to" counted uploaded chunks, so it hid the gap.
+- [ ] **Files:** `apps/web/src/lib/api.ts`, `apps/web/src/recorder/chunk-uploader.ts`, `apps/web/src/pages/RecordPage.tsx` (+ CSS module)
+- [ ] **`ApiError`:** `api()` throws an `ApiError` with the HTTP `status` (still an `Error`, same message). A network failure stays a `TypeError` from `fetch`.
+- [ ] **Retry until it works:** a chunk upload that fails because of the network, a 5xx, 408 or 429 keeps retrying: waits of 2, 4, 8 s, then every 15 s, and right away when the browser fires `online`. Only an API refusal (any other 4xx) gives up and goes to the failed list, which keeps **Try again**.
+- [ ] **Saved up to** = the chunks uploaded without a gap from the start (the first missing index), not the number uploaded.
+- [ ] **Live screen:** while uploads are waiting for the connection, the line under the controls becomes a status (`role="status"`): "No connection. Keep recording: the last N s of audio are kept here and upload when you are back online." Otherwise it keeps "Lost connection? Keep recording. Audio uploads when you are back online."
+- [ ] **Saving with no connection:** Stop waits for the queued chunks instead of failing: "Saving… waiting for the connection to upload the last N s. Keep this page open." It finishes on its own when the connection returns.
+- [ ] **Verify** (headless Chrome, speech fed in as the microphone, API requests failed while "offline"): a 60 s drop mid-recording shows the no-connection status and "Saved up to" stays at the drop; it catches up after the drop with no error and no click; going offline just before Stop shows the waiting message and the recording saves on its own when the connection returns; the transcript has every turn; CI green.
+- [ ] **Commit:** `fix(web): keep retrying chunk uploads until the connection returns`
+
+### Task 1.23 — Due dates as they were said
+> "by May second" was saved as `2024-05-02`: the model turned the date into a numeric date with a year it guessed.
+- [ ] **Files:** `apps/api/src/ai/notes/prompts.ts`
+- [ ] **Prompt rule:** `dueDate` is the deadline in the speaker's words ("Friday, April 11", "next week", "by the end of term"). Never turn it into a numeric date or add a year that wasn't said. Same rule for both adapters (Groq and Claude share the prompt) and for the merge step (it repeats the system prompt).
+- [ ] **Verify:** the 5-minute meeting and the 61-minute planning day from the acceptance test, uploaded again: every `dueDate` is in words with no invented year (no `YYYY-MM-DD`, no year that wasn't said); action items and owners are as complete as before; CI green.
+- [ ] **Commit:** `fix(api): keep due dates as they were said`
+
+### Task 1.24 — "Not found" without the wait
+> Opening a recording that isn't yours (or was deleted) showed a blank page for about 7 s: TanStack Query retried the 404 three times.
+- [ ] **Files:** `apps/web/src/main.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`
+- [ ] **No retries for API refusals:** the `QueryClient` default `retry` skips 4xx `ApiError`s (Task 1.22) and keeps up to 3 retries for network errors and 5xx.
+- [ ] **Detail page:** "not found" is detected by `status === 404` instead of the error message text.
+- [ ] **Verify:** another user opening `/recordings/<id>` sees "This recording does not exist or was deleted." within 1.5 s; a wrong-but-valid id the same; the Task 1.17 delete suite still passes; CI green.
+- [ ] **Commit:** `fix(web): show not found at once instead of retrying a 404`
+
+### Task 1.25 — API tests don't share queues with the dev worker
+> With a dev worker running, the API tests failed ("could not be removed because it is locked by another worker"): the worker picked up the tests' jobs from the same Redis queues.
+- [ ] **Files:** `apps/api/src/config.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/package.json`, `README.md`
+- [ ] **`QUEUE_PREFIX`:** a new optional setting (default `bull`, BullMQ's own default, so existing queues keep working). Queues and workers use it.
+- [ ] **Tests:** the `test` script sets `QUEUE_PREFIX=test`, so test jobs live under `test:*` keys that the dev worker never reads.
+- [ ] **README:** remove the "stop the worker before running the tests" note.
+- [ ] **Verify:** `pnpm turbo lint typecheck test` is green **with** `pnpm --filter @vn/api worker` running; the test run leaves its keys under `test:` in Redis; the dev worker still processes a real recording.
+- [ ] **Commit:** `fix(api): separate queue prefix for tests`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
