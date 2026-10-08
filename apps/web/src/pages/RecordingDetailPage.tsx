@@ -7,7 +7,7 @@ import { Button } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
 import { Tabs } from "../components/Tabs";
 import { Transcript } from "../components/Transcript";
-import { api } from "../lib/api";
+import { api, ApiError } from "../lib/api";
 import { failureText } from "../lib/status";
 import page from "./Page.module.css";
 import styles from "./RecordingDetailPage.module.css";
@@ -121,7 +121,7 @@ export function RecordingDetailPage() {
     return (
       <div className={`${page.page} ${page.detail}`}>
         <BackLink />
-        <p className={styles.error}>{error.message === "Recording not found" ? "This recording does not exist or was deleted." : "The recording could not be loaded. Check your connection, then reload the page."}</p>
+        <p className={styles.error}>{error instanceof ApiError && error.status === 404 ? "This recording does not exist or was deleted." : "The recording could not be loaded. Check your connection, then reload the page."}</p>
       </div>
     );
   }

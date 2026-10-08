@@ -1737,11 +1737,12 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.24 — "Not found" without the wait
 > Opening a recording that isn't yours (or was deleted) showed a blank page for about 7 s: TanStack Query retried the 404 three times.
-- [ ] **Files:** `apps/web/src/main.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`
-- [ ] **No retries for API refusals:** the `QueryClient` default `retry` skips 4xx `ApiError`s (Task 1.22) and keeps up to 3 retries for network errors and 5xx.
-- [ ] **Detail page:** "not found" is detected by `status === 404` instead of the error message text.
-- [ ] **Verify:** another user opening `/recordings/<id>` sees "This recording does not exist or was deleted." within 1.5 s; a wrong-but-valid id the same; the Task 1.17 delete suite still passes; CI green.
-- [ ] **Commit:** `fix(web): show not found at once instead of retrying a 404`
+- [x] **Files:** `apps/web/src/main.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`
+- [x] **No retries for API refusals:** the `QueryClient` default `retry` skips 4xx `ApiError`s (Task 1.22) and keeps up to 3 retries for network errors and 5xx.
+- [x] **Detail page:** "not found" is detected by `status === 404` instead of the error message text.
+- [x] **Verify:** another user opening `/recordings/<id>` sees "This recording does not exist or was deleted." within 1.5 s; a wrong-but-valid id the same; the Task 1.17 delete suite still passes; CI green.
+- [x] **As built:** `isRefusal()` (from Task 1.22) decides for both the uploader and the queries, so "worth retrying" means the same everywhere: network errors, 5xx, 408 and 429. Verified in headless Chrome, 6 checks. Another user's recording and a random valid id show "does not exist" in 135 ms and 233 ms after a single request. A network error is still retried (4 requests) and shows the connection message after 7.2 s. Also the Task 1.17 delete suite (23 checks, with fresh test data) and CI.
+- [x] **Commit:** `fix(web): show not found at once instead of retrying a 404`
 
 ### Task 1.25 — API tests don't share queues with the dev worker
 > With a dev worker running, the API tests failed ("could not be removed because it is locked by another worker"): the worker picked up the tests' jobs from the same Redis queues.
