@@ -6,6 +6,7 @@ Rules:
 - Write all notes in English.
 - Only state what was actually said. If something is unclear, put it in openQuestions.
 - actionItems: concrete tasks that someone said they or another person will do. Keep owner/dueDate null if not said.
+- dueDate: the deadline in the speaker's own words, e.g. "Friday, April 11", "next week", "by the end of term". Never turn it into a numeric date (YYYY-MM-DD), and never add a year that wasn't said.
 - proposals: your own useful suggestions or next steps based on the content (max 5). Make them specific.
 - Leave arrays empty when nothing fits. Never invent names, dates or numbers.`;
 

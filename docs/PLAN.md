@@ -1729,10 +1729,11 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.23 — Due dates as they were said
 > "by May second" was saved as `2024-05-02`: the model turned the date into a numeric date with a year it guessed.
-- [ ] **Files:** `apps/api/src/ai/notes/prompts.ts`
-- [ ] **Prompt rule:** `dueDate` is the deadline in the speaker's words ("Friday, April 11", "next week", "by the end of term"). Never turn it into a numeric date or add a year that wasn't said. Same rule for both adapters (Groq and Claude share the prompt) and for the merge step (it repeats the system prompt).
-- [ ] **Verify:** the 5-minute meeting and the 61-minute planning day from the acceptance test, uploaded again: every `dueDate` is in words with no invented year (no `YYYY-MM-DD`, no year that wasn't said); action items and owners are as complete as before; CI green.
-- [ ] **Commit:** `fix(api): keep due dates as they were said`
+- [x] **Files:** `apps/api/src/ai/notes/prompts.ts`
+- [x] **Prompt rule:** `dueDate` is the deadline in the speaker's words ("Friday, April 11", "next week", "by the end of term"). Never turn it into a numeric date or add a year that wasn't said. Same rule for both adapters (Groq and Claude share the prompt) and for the merge step (it repeats the system prompt).
+- [x] **Verify:** the 5-minute meeting and the 61-minute planning day from the acceptance test, uploaded again: every `dueDate` is in words with no invented year (no `YYYY-MM-DD`, no year that wasn't said); action items and owners are as complete as before; CI green.
+- [x] **As built:** one new rule line in the shared prompt, with neutral examples. The negative example is the pattern `YYYY-MM-DD`, not a real date, so the model isn't primed with a year. Verified with the acceptance-test audio on Groq. 5-minute meeting: the dates came out as "Friday April 11th", "Wednesday April 9th", "Monday, April 7th", and "this week" is now kept (it used to be null); 6 of 6 action items and owners. 61-minute planning day: all 40 due dates in words ("May 2nd" … "October 1st"), no numeric date or year; 40 action items with owners (39 before). CI green. Notes saved before this change keep their old dates.
+- [x] **Commit:** `fix(api): keep due dates as they were said`
 
 ### Task 1.24 — "Not found" without the wait
 > Opening a recording that isn't yours (or was deleted) showed a blank page for about 7 s: TanStack Query retried the 404 three times.
