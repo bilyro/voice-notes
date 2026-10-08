@@ -5,6 +5,8 @@ const Env = z.object({
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string(),
   REDIS_URL: z.string(),
+  // BullMQ key prefix. The tests set their own (package.json), so a running dev worker never takes their jobs
+  QUEUE_PREFIX: z.string().default("bull"),
   S3_ENDPOINT: z.string(),
   S3_REGION: z.string(),
   S3_BUCKET: z.string(),

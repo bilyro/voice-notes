@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src migrations scripts knexfile.ts",
-    "test": "DOTENV_PATH=../../.env vitest run",
+    "test": "DOTENV_PATH=../../.env QUEUE_PREFIX=test vitest run",
     "knex": "DOTENV_PATH=../../.env NODE_OPTIONS=\"--import tsx\" knex",
     "tsx": "DOTENV_PATH=../../.env tsx",
     "auth:migrate": "DOTENV_PATH=../../.env tsx scripts/auth-migrate.ts"

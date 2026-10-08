@@ -1746,12 +1746,13 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.25 — API tests don't share queues with the dev worker
 > With a dev worker running, the API tests failed ("could not be removed because it is locked by another worker"): the worker picked up the tests' jobs from the same Redis queues.
-- [ ] **Files:** `apps/api/src/config.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/package.json`, `README.md`
-- [ ] **`QUEUE_PREFIX`:** a new optional setting (default `bull`, BullMQ's own default, so existing queues keep working). Queues and workers use it.
-- [ ] **Tests:** the `test` script sets `QUEUE_PREFIX=test`, so test jobs live under `test:*` keys that the dev worker never reads.
-- [ ] **README:** remove the "stop the worker before running the tests" note.
-- [ ] **Verify:** `pnpm turbo lint typecheck test` is green **with** `pnpm --filter @vn/api worker` running; the test run leaves its keys under `test:` in Redis; the dev worker still processes a real recording.
-- [ ] **Commit:** `fix(api): separate queue prefix for tests`
+- [x] **Files:** `apps/api/src/config.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/worker.ts`, `apps/api/package.json`, `README.md`
+- [x] **`QUEUE_PREFIX`:** a new optional setting (default `bull`, BullMQ's own default, so existing queues keep working). Queues and workers use it.
+- [x] **Tests:** the `test` script sets `QUEUE_PREFIX=test`, so test jobs live under `test:*` keys that the dev worker never reads.
+- [x] **README:** remove the "stop the worker before running the tests" note.
+- [x] **Verify:** `pnpm turbo lint typecheck test` is green **with** `pnpm --filter @vn/api worker` running; the test run leaves its keys under `test:` in Redis; the dev worker still processes a real recording.
+- [x] **As built:** `QUEUE_PREFIX` is read once in `config.ts` and passed to both queues and to the worker's options. Production and dev keep `bull`, so no queued jobs are lost on deploy. `.env` doesn't need the setting. Verified: with a dev worker running, `pnpm turbo lint typecheck test` is green (9/9, API 25/25, no "locked by another worker"). Redis had 0 `test:*` keys before and 4 `test:notes` + 4 `test:transcribe` after. A real memo then went through the dev worker under `bull:` (ready in 5 s). The README note about stopping the worker is replaced by one about the prefix.
+- [x] **Commit:** `fix(api): separate queue prefix for tests`
 
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.

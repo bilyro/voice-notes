@@ -113,7 +113,7 @@ Step by step in [docs/PLAN.md](docs/PLAN.md), Task 1.16. On the server, with `.e
 
 GitHub Actions runs `pnpm turbo lint typecheck test` on every push and pull request ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
-The API tests use the same Redis queues as the dev worker. Stop `pnpm --filter @vn/api worker` before running them locally, or it picks up the tests' jobs ("could not be removed because it is locked by another worker").
+The API tests put their jobs under their own Redis prefix (`QUEUE_PREFIX=test` in the `test` script), so they can run while the dev worker is running.
 
 ## Phase 1 acceptance test
 
@@ -127,7 +127,7 @@ Run this checklist again before each release. Use test recordings of your own vo
 | 4 | A network drop during recording loses no audio | While recording, turn the network off for 20 s, then for 60 s (DevTools → Network → Offline, or Wi-Fi off) | ✅ all 25 turns in the transcript, also those said while offline. A 20 s drop recovers by itself; after a 60 s drop, Stop shows "Some audio could not be uploaded" and **Try again** finishes the upload |
 | 5 | A recording longer than 60 minutes completes (map → reduce) | Record or upload 60+ minutes | ✅ 61.6 min: transcript in 57 s, notes in 4.3 min (5+ calls, 60 s apart), first attempt, decisions from item 1 to item 40 |
 | 6 | Another user can't open your recording by guessing the URL | Sign in as a second user and open the first user's `/recordings/<id>` | ✅ every route returns 404 (401 signed out); the page says "This recording does not exist or was deleted." |
-| 7 | `pnpm turbo lint typecheck test` is green | Stop the dev worker first (see CI) | ✅ 9/9 tasks |
+| 7 | `pnpm turbo lint typecheck test` is green | Run it; the dev worker may keep running | ✅ 9/9 tasks |
 | 8 | All of the above with `STT_PROVIDER=groq` and `NOTES_PROVIDER=groq`, total cost $0 | Check `.env` | ✅ |
 | 9 | Online at `https://<name>.duckdns.org`, recording works from a phone | Task 1.16 | ⏳ waits for the server |
 

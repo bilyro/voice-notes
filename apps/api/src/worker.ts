@@ -1,10 +1,11 @@
 import { Worker } from "bullmq";
+import { config } from "./config.js";
 import { connection } from "./queue/queues.js";
 import { transcribeJob } from "./jobs/transcribe.job.js";
 import { notesJob } from "./jobs/notes.job.js";
 import { markFailed } from "./jobs/mark-failed.js";
 
-const opts = { connection, concurrency: 2 };
+const opts = { connection, concurrency: 2, prefix: config.QUEUE_PREFIX };
 
 for (const w of [
   new Worker("transcribe", (job) => transcribeJob(job.data.recordingId), opts),
