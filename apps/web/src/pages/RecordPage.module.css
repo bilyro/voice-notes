@@ -236,3 +236,8 @@
     margin-top: 10px;
   }
 }
+/* uploads are waiting for the connection: the same line, said louder (ink, not red: red is for recording and errors) */
+.offlineNow {
+  color: var(--color-ink);
+  font-weight: 600;
+}

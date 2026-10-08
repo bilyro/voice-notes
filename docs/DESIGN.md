@@ -144,6 +144,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | App shell (sidebar + content) | any screen | Task 0.7 |
 | New recording | `screens/NewRecording.dc.html` | Task 1.11 |
 | Recording in progress | `screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop) | Task 1.11 (web), Phase 4 (native app) |
+| Recording in progress, no connection: the hint under the controls turns into an ink 600 status "No connection. Keep recording: the last m:ss is kept here…"; after Stop, "Saving… waiting for the connection…" in the same style. Ink, not red: nothing is wrong yet | Task 1.22 (no mockup, text change only) | Task 1.22 |
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |
 | Recording detail (Notes / Transcript tabs) | `screens/RecordingDetail.dc.html` | Task 1.13, buttons in 1.14 |
 | Sign in / Create account: form column on the right (max 400px, logo links to `/`), grey panel on the left (example notes / the 3 steps + free-plan note), stacking under the form on a phone; Show/Hide password; errors are red text only | design canvas, artboards `SignIn`, `SignUp` | Task 1.19 |

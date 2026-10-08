@@ -8,7 +8,7 @@ import { RecordButton } from "../components/RecordButton";
 import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
-import { ChunkUploader } from "../recorder/chunk-uploader";
+import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
 import { useAudioLevel } from "../recorder/use-audio-level";
 import { CHUNK_MS, pickMimeType, useRecorder } from "../recorder/use-recorder";
 import page from "./Page.module.css";
@@ -27,6 +27,7 @@ const HINTS: Record<RecordingMode, string> = {
 };
 const BARS = 40;                       // waveform history, one bar per 100 ms level sample
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const NO_UPLOADS: UploadState = { saved: 0, pending: 0, offline: false };
 
 const levelLabel = (level: number) => (level < 0.02 ? "No sound" : level < 0.08 ? "Low" : "Good");
 
@@ -43,7 +44,7 @@ export function RecordPage() {
 
   const [phase, setPhase] = useState<"setup" | "starting" | "live" | "saving">("setup");
   const [error, setError] = useState<string | null>(null);
-  const [uploaded, setUploaded] = useState(0);
+  const [upload, setUpload] = useState<UploadState>(NO_UPLOADS);
   const [elapsed, setElapsed] = useState(0);
 
   const idRef = useRef<string | null>(null);
@@ -110,8 +111,8 @@ export function RecordPage() {
         body: JSON.stringify({ mode, title: title.trim() || undefined, mimeType: pickMimeType() || "audio/webm", source: "web" }),
       }));
       idRef.current = id;
-      uploaderRef.current = new ChunkUploader(id, setUploaded);
-      setUploaded(0);
+      uploaderRef.current = new ChunkUploader(id, setUpload);
+      setUpload(NO_UPLOADS);
       setElapsed(0);
       await recorder.start(deviceId || undefined);
       setPhase("live");
@@ -226,7 +227,8 @@ export function RecordPage() {
     );
   }
 
-  const saved = Math.min(uploaded * CHUNK_MS, elapsed);
+  const saved = Math.min(upload.saved * CHUNK_MS, elapsed);
+  const unsaved = formatDuration(Math.max(0, elapsed - saved));   // audio that only lives in this tab for now
 
   return (
     <div className={`${page.page} ${page.form} ${styles.live}`}>
@@ -274,14 +276,24 @@ export function RecordPage() {
         <RecordButton action="stop" label="Stop and save" onClick={stopAndSave} disabled={phase !== "live"} />
       </div>
 
-      {phase === "saving" && !error && <p className={styles.status} role="status">Saving…</p>}
+      {phase === "saving" && !error && (
+        <p className={`${styles.status} ${upload.offline ? styles.offlineNow : ""}`} role="status">
+          {upload.offline ? `Saving… waiting for the connection to upload the last ${unsaved}. Keep this page open.` : "Saving…"}
+        </p>
+      )}
       {error && (
         <div className={styles.saveError}>
           <p className={styles.error} role="alert">{error}</p>
           <Button variant="secondary" onClick={tryAgain}>Try again</Button>
         </div>
       )}
-      <p className={styles.offline}>Lost connection? Keep recording. Audio uploads when you are back online.</p>
+      {phase === "live" && (
+        <p className={`${styles.offline} ${upload.offline ? styles.offlineNow : ""}`} role="status">
+          {upload.offline
+            ? `No connection. Keep recording: the last ${unsaved} is kept here and uploads when you are back online.`
+            : "Lost connection? Keep recording. Audio uploads when you are back online."}
+        </p>
+      )}
     </div>
   );
 }
