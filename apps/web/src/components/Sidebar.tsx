@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import type { Recording, RecordingMode } from "@vn/shared";
+import type { ActionItemEntry, Recording, RecordingMode } from "@vn/shared";
 import { authClient } from "../lib/auth-client";
 import { api } from "../lib/api";
 import { ButtonLink } from "./Button";
@@ -37,7 +37,9 @@ export function Sidebar() {
     queryFn: () => api<Recording[]>("/recordings"),
     refetchInterval: (q) => (q.state.data?.some((r) => PROCESSING.includes(r.status)) ? 3000 : false),
   });
-  const recent = recordings?.slice(0, 3) ?? [];   // the API returns newest first
+  const recent = recordings?.slice(0, 3) ?? [];
+  // the same query (and cache) as the Action items page's "Open" view
+  const { data: openItems } = useQuery({ queryKey: ["action-items", "open"], queryFn: () => api<ActionItemEntry[]>("/action-items?status=open") });   // the API returns newest first
 
   async function signOut() {
     await authClient.signOut();
@@ -63,6 +65,10 @@ export function Sidebar() {
         <NavLink to="/" end className={styles.navItem}>
           All recordings
           {recordings && <span className={styles.count}>{recordings.length}</span>}
+        </NavLink>
+        <NavLink to="/action-items" className={styles.navItem}>
+          Action items
+          {openItems && <span className={styles.count} aria-label={`${openItems.length} open`}>{openItems.length}</span>}
         </NavLink>
       </nav>
 

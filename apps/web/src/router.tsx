@@ -7,6 +7,7 @@ import { RecordingsPage } from "./pages/RecordingsPage";
 import { RecordPage } from "./pages/RecordPage";
 import { RecordingDetailPage } from "./pages/RecordingDetailPage";
 import { LandingPage } from "./pages/LandingPage";
+import { ActionItemsPage } from "./pages/ActionItemsPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "/record", element: <RecordPage /> },
           { path: "/recordings/:id", element: <RecordingDetailPage /> },
+          { path: "/action-items", element: <ActionItemsPage /> },
         ],
       },
     ],

@@ -10,6 +10,9 @@ import { recordingsController } from "./modules/recordings/recordings.controller
 import { searchRepo } from "./modules/search/search.repository.js";
 import { SearchService } from "./modules/search/search.service.js";
 import { searchController } from "./modules/search/search.controller.js";
+import { actionItemsRepo } from "./modules/action-items/action-items.repository.js";
+import { ActionItemsService } from "./modules/action-items/action-items.service.js";
+import { actionItemsController } from "./modules/action-items/action-items.controller.js";
 
 async function realQueues(app: FastifyInstance): Promise<Queues> {
   const { queues, connection } = await import("./queue/queues.js");
@@ -22,8 +25,8 @@ async function realQueues(app: FastifyInstance): Promise<Queues> {
 
 export async function buildServer(opts: { queues?: Queues } = {}) {
   const app = Fastify({ logger: true });
-  // dev only (production is same-origin behind Caddy); PUT/DELETE must be listed, the default is GET,HEAD,POST
-  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true, methods: ["GET", "HEAD", "POST", "PUT", "DELETE"] });
+  // dev only (production is same-origin behind Caddy); PUT/PATCH/DELETE must be listed, the default is GET,HEAD,POST
+  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true, methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] });
 
   // set before registering routes, so the /api plugin below inherits it
   app.setErrorHandler((err, _req, reply) => {
@@ -58,6 +61,7 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
       }));
       await recordingsController(api, recordings);
       await searchController(api, new SearchService(searchRepo));
+      await actionItemsController(api, new ActionItemsService(actionItemsRepo, repo));
     },
     { prefix: "/api" },
   );

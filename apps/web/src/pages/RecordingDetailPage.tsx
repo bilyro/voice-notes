@@ -98,7 +98,10 @@ export function RecordingDetailPage() {
       setSaveError("The notes could not be saved. Check your connection, then try again.");
     },
     onSuccess: () => setEditing(false),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: ["action-items"] });   // the Action items page and the sidebar count
+    },
   });
 
   const retry = useMutation({
@@ -116,6 +119,7 @@ export function RecordingDetailPage() {
       queryClient.removeQueries({ queryKey: key });
       queryClient.removeQueries({ queryKey: ["recording-audio", id] });
       void queryClient.invalidateQueries({ queryKey: ["recordings"] });
+      void queryClient.invalidateQueries({ queryKey: ["action-items"] });   // its items are gone too
     },
   });
 

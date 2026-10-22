@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { LanguageCode, RecordingMode, SavedNotes } from "@vn/shared";
 import { Button } from "./Button";
+import { OwnerLine } from "./OwnerLine";
 import styles from "./NotesEditor.module.css";
 
 type ListKey = "keyPoints" | "decisions" | "reviewQuestions" | "ideas" | "proposals" | "openQuestions";
@@ -60,7 +61,7 @@ function NotesView({ notes, lang, onToggleDone, saving }: Props) {
                 <input type="checkbox" className={styles.check} checked={a.done} disabled={saving} onChange={() => onToggleDone(i)} />
                 <span className={styles.itemText}>
                   <span className={a.done ? styles.done : undefined} lang={lang}>{a.text}</span>
-                  <span className={styles.meta}>{ownerLine(a.owner, a.dueDate, lang)}</span>
+                  <span className={styles.meta}><OwnerLine owner={a.owner} due={a.dueDate} lang={lang} /></span>
                 </span>
               </label>
             ))}
@@ -96,15 +97,6 @@ function NotesView({ notes, lang, onToggleDone, saving }: Props) {
       <p className={styles.disclaimer}>Notes are written by AI from the transcript. Check names and dates before you share them.</p>
     </div>
   );
-}
-
-/**
- * "Marta · Friday, April 11" / "Олена · до понеділка" / "Marta" / "No owner or date yet".
- * No English "by": the due date is kept as it was said (Task 1.23), often with its own "by" / "до" / "para".
- */
-function ownerLine(owner: string | null, due: string | null, lang: LanguageCode) {
-  if (!owner && !due) return "No owner or date yet";
-  return <span lang={lang}>{[owner, due].filter(Boolean).join(" · ")}</span>;
 }
 
 /* ---------- editing ---------- */

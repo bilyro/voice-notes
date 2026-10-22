@@ -1823,12 +1823,24 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.29 — All to-dos in one place
 > An "Action items" page across every recording: what's still open, who owns it, tick it off.
-- [ ] **Files:** `apps/api/src/modules/action-items/*` (new, registered in `server.ts`), `packages/shared/src/schemas/notes.ts`, `apps/web/src/pages/ActionItemsPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `docs/DESIGN.md`
-- [ ] **API:** `GET /api/action-items?status=open|done|all` returns your items with their recording (id, title, mode, createdAt), newest recording first. `PATCH /api/action-items/:id { done }` flips the matching item in the recording's latest notes and saves it as a new version (`edited_by_user`), then rewrites `action_items`, all in one transaction. The notes stay the source of truth, so the detail page and this page always agree. Another user's item returns 404.
-- [ ] **Page `/action-items`:** a filter (Open · Done · All, default Open, kept in `?status=`), an optional owner filter built from the owners found, items grouped by recording (title links to it), each a to-do card row like on the detail page (checkbox, text, "owner · date" in the recording's language). The count of open items shows in the sidebar.
-- [ ] **Sidebar:** a nav item "Action items" with the open count, under "All recordings".
-- [ ] **Verify:** API tests: list only your items; PATCH creates a new notes version with that item done and the others unchanged; a second PATCH flips it back; another user's id → 404. In the browser: tick on this page → it moves to Done and the detail page shows it ticked; tick on the detail page → this page updates; the owner filter works; empty states ("Nothing open. Nice."); the sidebar count matches; phone width has no sideways scroll; CI green.
-- [ ] **Commit:** `feat: action items page across recordings`
+- [x] **Files:** `apps/api/src/modules/action-items/*` (new, registered in `server.ts`), `packages/shared/src/schemas/action-items.ts` (new), `apps/web/src/pages/ActionItemsPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `apps/web/src/components/OwnerLine.tsx` (new, shared with `NotesEditor`), `apps/web/src/pages/RecordingDetailPage.tsx` (refreshes this list), `apps/api/src/server.ts` (CORS allows `PATCH`), `docs/DESIGN.md`
+- [x] **API:** `GET /api/action-items?status=open|done|all` returns your items with their recording (id, title, mode, createdAt), newest recording first. `PATCH /api/action-items/:id { done }` flips the matching item in the recording's latest notes and saves it as a new version (`edited_by_user`), then rewrites `action_items`, all in one transaction. The notes stay the source of truth, so the detail page and this page always agree. Another user's item returns 404.
+- [x] **Page `/action-items`:** a filter (Open · Done · All, default Open, kept in `?status=`), an optional owner filter built from the owners found, items grouped by recording (title links to it), each a to-do card row like on the detail page (checkbox, text, "owner · date" in the recording's language). The count of open items shows in the sidebar.
+- [x] **Sidebar:** a nav item "Action items" with the open count, under "All recordings".
+- [x] **Verify:** API tests: list only your items; PATCH creates a new notes version with that item done and the others unchanged; a second PATCH flips it back; another user's id → 404. In the browser: tick on this page → it moves to Done and the detail page shows it ticked; tick on the detail page → this page updates; the owner filter works; empty states ("Nothing open. Nice."); the sidebar count matches; phone width has no sideways scroll; CI green.
+- [x] **As built:**
+  - **Finding the item:** `action_items` is rewritten from the notes on every save, so an item's index in its recording is the number of rows with a smaller id. The service checks that the notes' item at that index has the same text. If the notes changed meanwhile (another tab), it answers 409 "These notes were changed meanwhile…" instead of ticking the wrong item.
+  - **Ids change on every save,** so the page refetches after each tick and disables the checkboxes while one is saving.
+  - **Caching:** the page and the sidebar count share one query (`["action-items", "open"]`). The detail page refreshes it after saving notes or deleting a recording.
+  - **Instant tick:** in "Open", a ticked item stays (struck through) until the list reloads.
+  - **Reuse:** the to-do card styles come from `NotesEditor.module.css`, and "owner · date" became a small `OwnerLine` component used by both pages.
+  - **CORS:** the API's list didn't allow `PATCH` yet; added.
+  - **Owner sorting:** owners are sorted for the browser's language (Cyrillic first in a Ukrainian browser).
+  - **Verified:**
+    - API tests, 5: only your own items in the notes' order, newest recording first; a tick creates a new notes version with only that item done and untick works too; another user's or an unknown id → 404; changed notes → 409; bad status or id → 400; no session → 401.
+    - Headless Chrome, 19 checks: sidebar link and count; groups, order and `lang`; instant tick, then it leaves "Open" and the count drops; Done in the URL; the detail page shows it ticked; a tick on the detail page updates the count and this page; owner filter including "No owner"; empty state "Nothing open. Nice." with count 0; deleting a recording removes its items; phone width; no page errors.
+    - CI green (44 API tests).
+- [x] **Commit:** `feat: action items page across recordings`
 
 ### Task 1.30 — Share a read-only link (notes only)
 > Send the notes to someone without an account. Only the notes leave the account: no transcript, no audio, no email address. You can turn the link off at any time.
