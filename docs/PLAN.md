@@ -1777,6 +1777,46 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
   - **Quality note:** Groq's free Whisper heard "п'ятницю" as "Татницю" once on the synthetic voice. Ukrainian and Spanish accuracy is something to judge in Task 1b.3.
 - [x] **Commit:** `feat: record in Ukrainian and Spanish`
 
+> **Decided on 2026-10-22 (what comes next):** first the web features below (Tasks 1.27–1.30, all on the free stack), then the **desktop app** (Phase 3). After that, live mode or the mobile app. Speaker labels ("who said what") wait for the paid stack (Phase 1b), because Groq's free Whisper can't tell speakers apart. Shared links show the **notes only**.
+
+### Task 1.27 — Upload an audio file
+> Drop in an existing recording (a phone voice memo, a Zoom/Teams export) instead of recording live. It uses the same pipeline and chunk upload as live recording, which the desktop and mobile apps will reuse too.
+- [ ] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `apps/web/src/recorder/file-upload.ts` (new), `docs/DESIGN.md`
+- [ ] **Shared:** `source` gains `"upload"`.
+- [ ] **Record page:** under the record button, a secondary "Upload an audio file" button (a hidden `<input type="file" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.ogg,.webm">`). Mode, title and language come from the same form; the title defaults to the file name without its extension.
+- [ ] **In the browser:** read the duration from the file's metadata (`<audio>` `loadedmetadata`). Refuse it with a clear message if it isn't playable audio or is longer than 2 hours (the free speech-to-text takes 25 MB per file, which is about 2 h after our 24 kbps conversion). Then create the recording, slice the file into 5 MB byte chunks (the API takes 10 MB per chunk) and send them through `ChunkUploader` (Task 1.22 retries included), then `finish` with the real duration. No API change: the worker joins byte chunks and ffmpeg reads the original format.
+- [ ] **Progress:** "Uploading… 40%" with a progress bar, a Cancel button (deletes the half-uploaded recording) and the same no-connection messages as live recording. When done, go to the recording.
+- [ ] **Verify:** `.m4a`, `.mp3` and `.wav` files made with ffmpeg from test speech each give a transcript and notes; a 2 h 10 min file and a `.txt` renamed to `.mp3` are refused with their messages before anything is uploaded; a 60 s network drop during upload recovers on its own; Cancel leaves nothing behind; the monthly minute limit still applies; CI green.
+- [ ] **Commit:** `feat(web): upload an audio file`
+
+### Task 1.28 — Search recordings
+> The search field from the Recordings mockup ("Search titles, transcripts and notes"). Full-text search now; meaning-based (semantic) search stays in Phase 2.
+- [ ] **Files:** `apps/api/migrations/003_search.ts` (new), `apps/api/src/modules/search/*` (new controller + service + repository, registered in `server.ts`), `packages/shared/src/schemas/search.ts` (new), `apps/web/src/pages/RecordingsPage.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`
+- [ ] **Migration:** a stored, generated `tsvector` column on `transcript_segments` (`to_tsvector('simple', text)`) with a GIN index, and a GIN expression index on the latest notes (`jsonb_to_tsvector('simple', content, '["string"]')`, string values only, so JSON keys like "summary" never match). We use the `simple` configuration because recordings are English, Ukrainian or Spanish and Postgres has no Ukrainian dictionary. Titles are matched with `ILIKE`.
+- [ ] **API:** `GET /api/search?q=` (`requireUser`, at least 2 characters, up to 20 recordings, only your own). Each result is the recording (id, title, mode, language, createdAt) plus up to 3 matches: `{ kind: "title" | "notes" | "transcript", snippet, startMs? }`. Snippets come from `ts_headline` with the match marked, and the web app renders the mark safely (no raw HTML from the database).
+- [ ] **Web:** the search field above the list (debounced 300 ms; the query is kept in the URL as `?q=` so Back works). While searching, the list shows the results instead: the title card plus snippet lines, and a transcript match shows its timestamp. "No recordings match 'xyz'" when empty. A transcript match links to `/recordings/:id?t=<ms>`, and the detail page opens the Transcript tab and jumps there.
+- [ ] **Verify:** API tests: a word from a transcript, a word from the notes and a title word each find the right recording; another user's recording never appears; a Ukrainian word finds the Ukrainian recording; JSON keys don't match. In the browser: type → results with marked words; click a transcript match → the detail page plays from that moment; clearing the field shows the full list again; Back keeps the query; CI green.
+- [ ] **Commit:** `feat: search titles, transcripts and notes`
+
+### Task 1.29 — All to-dos in one place
+> An "Action items" page across every recording: what's still open, who owns it, tick it off.
+- [ ] **Files:** `apps/api/src/modules/action-items/*` (new, registered in `server.ts`), `packages/shared/src/schemas/notes.ts`, `apps/web/src/pages/ActionItemsPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `docs/DESIGN.md`
+- [ ] **API:** `GET /api/action-items?status=open|done|all` returns your items with their recording (id, title, mode, createdAt), newest recording first. `PATCH /api/action-items/:id { done }` flips the matching item in the recording's latest notes and saves it as a new version (`edited_by_user`), then rewrites `action_items`, all in one transaction. The notes stay the source of truth, so the detail page and this page always agree. Another user's item returns 404.
+- [ ] **Page `/action-items`:** a filter (Open · Done · All, default Open, kept in `?status=`), an optional owner filter built from the owners found, items grouped by recording (title links to it), each a to-do card row like on the detail page (checkbox, text, "owner · date" in the recording's language). The count of open items shows in the sidebar.
+- [ ] **Sidebar:** a nav item "Action items" with the open count, under "All recordings".
+- [ ] **Verify:** API tests: list only your items; PATCH creates a new notes version with that item done and the others unchanged; a second PATCH flips it back; another user's id → 404. In the browser: tick on this page → it moves to Done and the detail page shows it ticked; tick on the detail page → this page updates; the owner filter works; empty states ("Nothing open. Nice."); the sidebar count matches; phone width has no sideways scroll; CI green.
+- [ ] **Commit:** `feat: action items page across recordings`
+
+### Task 1.30 — Share a read-only link (notes only)
+> Send the notes to someone without an account. Only the notes leave the account: no transcript, no audio, no email address. You can turn the link off at any time.
+- [ ] **Files:** `apps/api/migrations/004_share_links.ts` (new), `apps/api/src/modules/recordings/*` (share and unshare), `apps/api/src/modules/shared/*` (new public route, registered in `server.ts`), `apps/web/src/pages/SharedNotesPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`, `apps/web/src/components/NotesEditor.tsx`, `docs/DESIGN.md`
+- [ ] **Migration:** `recordings.share_token` (text, unique, nullable).
+- [ ] **API:** `POST /api/recordings/:id/share` creates a token (32 random bytes, base64url) if there is none and returns it; `DELETE /api/recordings/:id/share` clears it; both are owner-only (404 otherwise) and only for `ready` recordings. Public `GET /api/shared/:token` (no session) returns just `{ title, mode, language, createdAt, durationMs, notes }`, or 404 when the link is off or unknown. Deleting the recording ends the link too.
+- [ ] **Detail page:** a secondary "Share" button in the actions row opens an inline panel (like Delete: no modal). Link off: "Create link". Link on: the URL in a read-only field, "Copy link", "Turn off link", and the line "Anyone with the link can read these notes. The transcript and audio stay private."
+- [ ] **Public page `/s/:token`:** no sidebar and no sign-in. The title, "Mode · date · duration", and the notes cards read-only (`NotesEditor` gets a `readOnly` view: checkboxes shown but disabled). Footer "Made with Voice notes" linking to `/about`. `noindex` meta, so search engines don't list shared notes. Unknown or turned-off links show "This link doesn't work any more."
+- [ ] **Verify:** API tests: the public response has exactly those keys (no transcript, audio, user or email); turn off → 404; a new link after turning off is a different token; another user can't create or turn off a link; deleting the recording → 404. In the browser: create, copy, open in a signed-out browser → notes shown with no transcript tab, no audio, no edit; turn off → the message; phone width OK; CI green.
+- [ ] **Commit:** `feat: share notes with a read-only link`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
@@ -1835,11 +1875,11 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - **More language options** (recording in Ukrainian and Spanish is done, Task 1.26): `auto` (detect the spoken language), notes in another language than the recording (a per-user setting, e.g. a `user_settings` table, and a separate notes language in prompts and `NotesGenerator`), and a translated interface if needed. Compare STT providers on Ukrainian and Spanish samples (Task 1b.3).
 - Speaker labels (diarization): switch/add an STT adapter that returns speakers (candidate: OpenAI `gpt-4o-transcribe-diarize`); UI to rename "Speaker 1" → a real name (stored per recording).
 - Embeddings for transcript segments (fill the `embedding` column), HNSW index on pgvector.
-- Search page: full-text (`tsvector`) + semantic search combined (the search field is already in the Recordings design).
+- Semantic search (by meaning) added to the full-text search from Task 1.28, using the embeddings above.
 - "Ask your recordings" chat: retrieve top segments → answer with links to `[recording, timestamp]`.
-- Action items page across all recordings (filter: open / done / owner), plus the "Assign" button for items without an owner.
+- "Assign" for action items without an owner, on the Action items page from Task 1.29.
 
-### Phase 3 — Desktop app, Electron (≈2 weeks)
+### Phase 3 — Desktop app, Electron (≈2 weeks) — next after Task 1.30
 - Electron shell loading the web UI; same API and auth.
 - Tray icon, global hotkey to start/stop, "always on top" mini recorder.
 - **System audio capture** for Zoom/Meet/Teams calls, mixed with the mic via Web Audio API. Do a 1–2 day spike first on your OS — Windows and macOS work differently, and this is the riskiest part of the whole project.
