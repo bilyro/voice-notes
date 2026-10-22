@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
+import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment, type ShareLink } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { Button } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
@@ -16,6 +16,7 @@ type Detail = {
   recording: Recording;
   segments: Segment[];
   notes: { version: number; editedByUser: boolean; content: unknown } | null;
+  shareToken: string | null;          // the read-only link is on (Task 1.30)
 };
 
 const MODE_LABEL: Record<RecordingMode, string> = { meeting: "Meeting", lesson: "Lesson", memo: "Voice memo" };
@@ -56,6 +57,10 @@ export function RecordingDetailPage() {
   const [confirming, setConfirming] = useState(false);
   const deleteButton = useRef<HTMLButtonElement>(null);
   const confirmPanel = useRef<HTMLElement>(null);
+  const [sharing, setSharing] = useState(false);
+  const [linkCopy, setLinkCopy] = useState<"idle" | "copied" | "failed">("idle");
+  const shareButton = useRef<HTMLButtonElement>(null);
+  const sharePanel = useRef<HTMLElement>(null);
 
   const { data, error } = useQuery({
     queryKey: key,
@@ -128,6 +133,22 @@ export function RecordingDetailPage() {
     if (confirming) confirmPanel.current?.focus();
   }, [confirming]);
 
+  // the read-only link (Task 1.30): on = a token, off = none
+  const shareLink = useMutation({
+    mutationFn: (on: boolean) =>
+      on ? api<ShareLink>(`/recordings/${id}/share`, { method: "POST" }) : api<undefined>(`/recordings/${id}/share`, { method: "DELETE" }),
+    onSuccess: (res, on) => queryClient.setQueryData<Detail>(key, (d) => d && { ...d, shareToken: on && res ? res.token : null }),
+  });
+  useEffect(() => {
+    if (sharing) sharePanel.current?.focus();
+  }, [sharing]);
+  function closeShare() {
+    setSharing(false);
+    setLinkCopy("idle");
+    shareLink.reset();
+    shareButton.current?.focus();
+  }
+
   function closeConfirm() {
     setConfirming(false);
     remove.reset();
@@ -167,6 +188,16 @@ export function RecordingDetailPage() {
     URL.revokeObjectURL(url);
   }
 
+  const shareUrl = data.shareToken ? `${window.location.origin}/s/${data.shareToken}` : null;
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl!);
+      setLinkCopy("copied");
+    } catch {
+      setLinkCopy("failed");
+    }
+  }
+
   const toggleDone = (i: number) =>
     notes && save.mutate({ ...notes, actionItems: notes.actionItems.map((a, j) => (j === i ? { ...a, done: !a.done } : a)) });
 
@@ -196,6 +227,16 @@ export function RecordingDetailPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M13 7l4 4" /></svg>
               Edit notes
             </Button>
+            <Button
+              ref={shareButton}
+              variant="secondary"
+              aria-expanded={sharing}
+              aria-controls="share-panel"
+              onClick={() => { if (sharing) closeShare(); else { setConfirming(false); setSharing(true); } }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" /></svg>
+              {data.shareToken ? "Shared" : "Share"}
+            </Button>
           </>
         )}
         {/* every status can be deleted: a failed or stuck recording should not stay forever */}
@@ -205,7 +246,7 @@ export function RecordingDetailPage() {
           className={styles.deleteButton}
           aria-expanded={confirming}
           aria-controls="confirm-delete"
-          onClick={() => (confirming ? closeConfirm() : setConfirming(true))}
+          onClick={() => { if (confirming) closeConfirm(); else { setSharing(false); setConfirming(true); } }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M6 7l1 13h10l1-13" /><path d="M9 7V4h6v3" /></svg>
           Delete
@@ -231,6 +272,40 @@ export function RecordingDetailPage() {
             </Button>
             <Button variant="secondary" onClick={closeConfirm} disabled={remove.isPending}>Keep it</Button>
           </div>
+        </section>
+      )}
+
+      {sharing && (
+        <section
+          id="share-panel"
+          ref={sharePanel}
+          tabIndex={-1}
+          aria-labelledby="share-title"
+          className={styles.confirm}
+          onKeyDown={(e) => { if (e.key === "Escape") closeShare(); }}
+        >
+          <h2 id="share-title" className={styles.confirmTitle}>Share these notes</h2>
+          <p className={styles.confirmText}>Anyone with the link can read these notes. The transcript and audio stay private.</p>
+          {shareUrl ? (
+            <>
+              <label htmlFor="share-url" className="visually-hidden">Link to these notes</label>
+              <input id="share-url" className={styles.shareUrl} readOnly value={shareUrl} onFocus={(e) => e.target.select()} />
+              <div className={styles.confirmButtons}>
+                <Button onClick={copyLink}>{linkCopy === "copied" ? "Copied" : "Copy link"}</Button>
+                <Button variant="secondary" onClick={() => shareLink.mutate(false)} disabled={shareLink.isPending}>
+                  {shareLink.isPending ? "Turning off…" : "Turn off link"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className={styles.confirmButtons}>
+              <Button onClick={() => shareLink.mutate(true)} disabled={shareLink.isPending}>{shareLink.isPending ? "Creating…" : "Create link"}</Button>
+              <Button variant="secondary" onClick={closeShare}>Close</Button>
+            </div>
+          )}
+          {shareLink.error && <p className={styles.error} role="alert">The link could not be changed. Check your connection, then try again.</p>}
+          {linkCopy === "failed" && <p className={styles.error} role="alert">Copying is blocked in this browser. Select the link above and copy it.</p>}
+          <p className="visually-hidden" role="status">{linkCopy === "copied" ? "Link copied" : ""}</p>
         </section>
       )}
 

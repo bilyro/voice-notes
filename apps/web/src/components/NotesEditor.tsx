@@ -21,6 +21,8 @@ type Props = {
   lang: LanguageCode;
   editing: boolean;
   saving: boolean;
+  /** the public shared page (Task 1.30): checkboxes show what's done but can't be changed */
+  readOnly?: boolean;
   error: string | null;
   onSave: (notes: SavedNotes) => void;
   onCancel: () => void;
@@ -33,7 +35,7 @@ export function NotesEditor(props: Props) {
 
 /* ---------- reading ---------- */
 
-function NotesView({ notes, lang, onToggleDone, saving }: Props) {
+function NotesView({ notes, lang, onToggleDone, saving, readOnly }: Props) {
   const list = (key: ListKey) =>
     notes[key].length > 0 && (
       <section aria-labelledby={`h-${key}`} className={key === "decisions" ? styles.decisionCard : styles.card}>
@@ -58,7 +60,7 @@ function NotesView({ notes, lang, onToggleDone, saving }: Props) {
           <div>
             {notes.actionItems.map((a, i) => (
               <label key={i} className={styles.item}>
-                <input type="checkbox" className={styles.check} checked={a.done} disabled={saving} onChange={() => onToggleDone(i)} />
+                <input type="checkbox" className={styles.check} checked={a.done} disabled={saving || readOnly} onChange={() => onToggleDone(i)} />
                 <span className={styles.itemText}>
                   <span className={a.done ? styles.done : undefined} lang={lang}>{a.text}</span>
                   <span className={styles.meta}><OwnerLine owner={a.owner} due={a.dueDate} lang={lang} /></span>

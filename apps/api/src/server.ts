@@ -13,6 +13,7 @@ import { searchController } from "./modules/search/search.controller.js";
 import { actionItemsRepo } from "./modules/action-items/action-items.repository.js";
 import { ActionItemsService } from "./modules/action-items/action-items.service.js";
 import { actionItemsController } from "./modules/action-items/action-items.controller.js";
+import { sharedController } from "./modules/shared/shared.controller.js";
 
 async function realQueues(app: FastifyInstance): Promise<Queues> {
   const { queues, connection } = await import("./queue/queues.js");
@@ -62,6 +63,7 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
       await recordingsController(api, recordings);
       await searchController(api, new SearchService(searchRepo));
       await actionItemsController(api, new ActionItemsService(actionItemsRepo, repo));
+      await sharedController(api, recordings);
     },
     { prefix: "/api" },
   );

@@ -1,4 +1,5 @@
-import type { CreateRecordingInput, SavedNotes } from "@vn/shared";
+import { randomBytes } from "node:crypto";
+import { SavedNotes, type CreateRecordingInput, type SharedRecording } from "@vn/shared";
 import { config } from "../../config.js";
 import { httpError } from "../../lib/http-error.js";
 import { keys, storage } from "../../storage/storage.service.js";
@@ -43,7 +44,33 @@ export class RecordingsService {
       recording: toRecording(rec),
       segments,
       notes: notes ? { version: notes.version, editedByUser: notes.edited_by_user, content: notes.content } : null,
+      shareToken: rec.share_token,                    // only the owner sees this (getOwned above)
     };
+  }
+
+  /** Creates the read-only link (or returns the one that is already on). Only recordings with notes. */
+  async share(userId: string, id: string) {
+    const rec = await this.repo.getOwned(userId, id);
+    if (rec.status !== "ready") throw httpError(409, "Only a recording with notes can be shared");
+    if (rec.share_token) return { token: rec.share_token };
+    const token = randomBytes(32).toString("base64url");          // 256 bits: can't be guessed
+    await this.repo.update(id, { share_token: token });
+    return { token };
+  }
+
+  /** Turns the link off at once; a new link later gets a new token. */
+  async unshare(userId: string, id: string) {
+    await this.repo.getOwned(userId, id);
+    await this.repo.update(id, { share_token: null });
+  }
+
+  /** The public view: the notes only. Unknown, turned-off or not-ready links all look the same: 404. */
+  async shared(token: string): Promise<SharedRecording> {
+    const rec = await this.repo.getShared(token);
+    const notes = rec && (await this.repo.latestNotes(rec.id));
+    if (!rec || !notes) throw httpError(404, "Link not found");
+    const r = toRecording(rec);
+    return { title: r.title, mode: r.mode, language: r.language, createdAt: r.createdAt, durationMs: r.durationMs, notes: SavedNotes.parse(notes.content) };
   }
 
   async audioUrl(userId: string, id: string) {

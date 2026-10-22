@@ -58,6 +58,18 @@
 .confirm .error {
   margin-top: var(--space-2);
 }
+/* the shared link (Task 1.30): read-only, selected on focus */
+.shareUrl {
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--space-3);
+  padding: 0 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 14px;
+}
 .confirmButtons {
   display: flex;
   flex-wrap: wrap;

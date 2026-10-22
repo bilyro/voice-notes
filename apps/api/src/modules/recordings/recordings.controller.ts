@@ -58,6 +58,18 @@ export async function recordingsController(app: FastifyInstance, service: Record
     return { ok: true };
   });
 
+  // Task 1.30: the read-only link to the notes (the public side is modules/shared)
+  app.post("/recordings/:id/share", { preHandler: requireUser }, async (req) => {
+    const { id } = IdParams.parse(req.params);
+    return service.share(req.userId, id);
+  });
+
+  app.delete("/recordings/:id/share", { preHandler: requireUser }, async (req, reply) => {
+    const { id } = IdParams.parse(req.params);
+    await service.unshare(req.userId, id);
+    return reply.status(204).send();
+  });
+
   app.delete("/recordings/:id", { preHandler: requireUser }, async (req, reply) => {
     const { id } = IdParams.parse(req.params);
     await service.delete(req.userId, id);

@@ -16,6 +16,7 @@ export type RecordingRow = {
   duration_ms: number | null;
   audio_key: string | null;
   error: string | null;
+  share_token: string | null;                 // Task 1.30: the read-only link, or null
   created_at: Date;
   updated_at: Date;
 };
@@ -61,6 +62,11 @@ export class RecordingsRepository {
     const row = await this.db<RecordingRow>("recordings").where({ id, user_id: userId }).first();
     if (!row) throw httpError(404, "Recording not found");
     return row;
+  }
+
+  /** A ready recording shared with this token, or undefined (unknown token, link turned off, not ready). */
+  getShared(token: string) {
+    return this.db<RecordingRow>("recordings").where({ share_token: token, status: "ready" }).first();
   }
 
   listByUser(userId: string) {
