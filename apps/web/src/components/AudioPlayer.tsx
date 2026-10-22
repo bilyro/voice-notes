@@ -32,7 +32,7 @@ export function AudioPlayer({ src, durationMs, onTime, ref }: Props) {
       a.currentTime = ms / 1000;
       setTimeMs(ms);
       onTime?.(ms);
-      void a.play();
+      a.play().catch(() => {});     // a browser may block playing without a click: then it just waits at that moment
     },
   }), [onTime]);
 

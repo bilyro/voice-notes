@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
@@ -42,7 +42,12 @@ export function RecordingDetailPage() {
   const queryClient = useQueryClient();
   const key = ["recording", id];
   const player = useRef<AudioPlayerHandle>(null);
-  const [tab, setTab] = useState<"notes" | "transcript">("notes");
+  // ?t=<ms> (a search result said there): open the transcript at that moment
+  const [params] = useSearchParams();
+  const startAt = params.has("t") ? Number(params.get("t")) : null;
+  const jumped = useRef(false);
+  const transcriptBox = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<"notes" | "transcript">(startAt === null ? "notes" : "transcript");
   const [timeMs, setTimeMs] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -64,6 +69,14 @@ export function RecordingDetailPage() {
     enabled: hasAudio,
     staleTime: 50 * 60 * 1000,          // the signed URL is valid for an hour
   });
+
+  // once the player is there: jump to ?t= and bring that transcript line into view
+  useEffect(() => {
+    if (startAt === null || !Number.isFinite(startAt) || jumped.current || !audio.data || !player.current) return;
+    jumped.current = true;
+    player.current.seek(startAt);
+    requestAnimationFrame(() => transcriptBox.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: "center" }));
+  }, [startAt, audio.data]);
 
   const save = useMutation({
     mutationFn: (notes: SavedNotes) =>
@@ -273,7 +286,7 @@ export function RecordingDetailPage() {
               />
             </>
           ) : (
-            <div className={styles.transcript}>
+            <div className={styles.transcript} ref={transcriptBox}>
               <Transcript segments={data.segments} lang={rec.language} currentMs={timeMs} onSeek={seek} />
             </div>
           )}

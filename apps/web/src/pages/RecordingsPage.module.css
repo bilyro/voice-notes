@@ -1,4 +1,57 @@
-/* docs/design/screens/Recordings.dc.html (search field: Phase 2) */
+/* docs/design/screens/Recordings.dc.html; the search field: Task 1.28 */
+.search {
+  position: relative;
+  margin-top: var(--space-5);
+}
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+.searchInput {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px 0 42px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-edge);
+}
+/* where the words were found: under the title, one line each */
+.stale .rows {
+  opacity: 0.55;
+}
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  color: var(--color-ink-soft);
+}
+.match {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.kind,
+.time {
+  flex: none;
+  min-width: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.time {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
 .filters {
   margin-top: var(--space-5);
 }

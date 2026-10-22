@@ -1,0 +1,7 @@
+/* the same decision yellow as the transcript's playing line: "this is the bit you're looking for" */
+.mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--color-card-decision);
+  color: var(--color-ink);
+}

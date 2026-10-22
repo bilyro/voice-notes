@@ -7,6 +7,9 @@ import { requireUser } from "./plugins/require-user.js";
 import { repo } from "./modules/recordings/recordings.repository.js";
 import { RecordingsService, type Queues } from "./modules/recordings/recordings.service.js";
 import { recordingsController } from "./modules/recordings/recordings.controller.js";
+import { searchRepo } from "./modules/search/search.repository.js";
+import { SearchService } from "./modules/search/search.service.js";
+import { searchController } from "./modules/search/search.controller.js";
 
 async function realQueues(app: FastifyInstance): Promise<Queues> {
   const { queues, connection } = await import("./queue/queues.js");
@@ -54,6 +57,7 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
         freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq",
       }));
       await recordingsController(api, recordings);
+      await searchController(api, new SearchService(searchRepo));
     },
     { prefix: "/api" },
   );

@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Recording, RecordingMode } from "@vn/shared";
+import type { Recording, RecordingMode, SearchResult } from "@vn/shared";
 import { ButtonLink } from "../components/Button";
 import { FilterPills } from "../components/FilterPills";
+import { Snippet } from "../components/Snippet";
 import { StatusLabel } from "../components/StatusLabel";
 import { api } from "../lib/api";
 import { groupLabel, shortDate } from "../lib/dates";
+import { formatDuration } from "../lib/format";
 import page from "./Page.module.css";
 import styles from "./RecordingsPage.module.css";
 
@@ -23,6 +25,24 @@ const PROCESSING: Recording["status"][] = ["uploaded", "transcribing", "summariz
 export function RecordingsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const queryClient = useQueryClient();
+
+  // search (Task 1.28): the query lives in the URL (?q=), so Back from a recording returns to the results
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") ?? "";
+  const [text, setText] = useState(q);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (text.trim() !== q) setParams(text.trim() ? { q: text.trim() } : {}, { replace: true });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [text, q, setParams]);
+  const searching = q.length >= 2;
+  const search = useQuery({
+    queryKey: ["search", q],
+    queryFn: () => api<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`),
+    enabled: searching,
+    placeholderData: (previous) => previous,   // keep the old results on screen while the next ones load
+  });
 
   const { data, error } = useQuery({
     queryKey: ["recordings"],
@@ -58,6 +78,76 @@ export function RecordingsPage() {
     );
   }
 
+  const searchField = (
+    <div className={styles.search}>
+      <label htmlFor="search" className="visually-hidden">Search recordings</label>
+      <svg className={styles.searchIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+      <input
+        id="search"
+        type="search"
+        className={styles.searchInput}
+        placeholder="Search titles, transcripts and notes"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </div>
+  );
+  const filters = (
+    <div className={styles.filters}>
+      <FilterPills label="Filter by type" options={FILTERS} value={filter} onChange={setFilter} />
+    </div>
+  );
+
+  if (searching) {
+    const results = (search.data ?? []).filter((r) => filter === "all" || r.recording.mode === filter);
+    // the previous query's results stay on screen while these load: dimmed, marked busy, never called "no match"
+    const stale = !search.data || search.isPlaceholderData;
+    return (
+      <div className={`${page.page} ${page.list}`}>
+        <h1>Recordings</h1>
+        {searchField}
+        {filters}
+        {search.error ? (
+          <p className={styles.error}>Search didn't work. Check your connection, then try again.</p>
+        ) : !stale && results.length === 0 ? (
+          <p className={`muted ${styles.none}`} role="status">No recordings match “{q}”</p>
+        ) : (
+          <section aria-label={`Search results for ${q}`} aria-busy={stale} className={`${styles.group} ${stale ? styles.stale : ""}`}>
+            <p className={styles.groupTitle} role="status">{stale ? "Searching…" : `${results.length} ${results.length === 1 ? "recording" : "recordings"} found`}</p>
+            <ul className={styles.rows}>
+              {results.map(({ recording: r, matches }) => {
+                const title = matches.find((m) => m.kind === "title");
+                return (
+                  <li key={r.id} className={styles.row}>
+                    <span className={styles.tile} data-mode={r.mode} aria-hidden="true"><ModeIcon mode={r.mode} /></span>
+                    <div className={styles.main}>
+                      <Link to={`/recordings/${r.id}`} className={styles.title}>{title ? <Snippet text={title.snippet} /> : r.title}</Link>
+                      <div className={styles.meta}>{MODE_LABEL[r.mode]}, {shortDate(new Date(r.createdAt))}</div>
+                      <ul className={styles.matches}>
+                        {matches.filter((m) => m.kind !== "title").map((m, i) => (
+                          <li key={i} className={styles.match}>
+                            {m.kind === "transcript" && m.startMs !== undefined ? (
+                              <Link to={`/recordings/${r.id}?t=${m.startMs}`} className={styles.time} aria-label={`Play from ${formatDuration(m.startMs)}`}>
+                                {formatDuration(m.startMs)}
+                              </Link>
+                            ) : (
+                              <span className={styles.kind}>Notes</span>
+                            )}
+                            <Snippet text={m.snippet} lang={r.language} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
+    );
+  }
+
   const shown = filter === "all" ? data : data.filter((r) => r.mode === filter);
   // the API returns newest first, so groups come out in order
   const groups = new Map<string, Recording[]>();
@@ -69,9 +159,8 @@ export function RecordingsPage() {
   return (
     <div className={`${page.page} ${page.list}`}>
       <h1>Recordings</h1>
-      <div className={styles.filters}>
-        <FilterPills label="Filter by type" options={FILTERS} value={filter} onChange={setFilter} />
-      </div>
+      {searchField}
+      {filters}
 
       {shown.length === 0 && <p className={`muted ${styles.none}`}>No {FILTERS.find((f) => f.value === filter)!.label.toLowerCase()} yet</p>}
 
