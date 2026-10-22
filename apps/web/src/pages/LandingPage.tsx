@@ -59,7 +59,7 @@ export function LandingPage() {
               {signedIn ? "Open my recordings" : "I have an account"}
             </ButtonLink>
           </div>
-          <p className={styles.small}>Works in your browser, on a laptop or a phone. English only for now.</p>
+          <p className={styles.small}>Works in your browser, on a laptop or a phone. Record in English, Ukrainian or Spanish.</p>
         </section>
 
         <ExampleCards />
@@ -119,7 +119,7 @@ export function LandingPage() {
           <LogoMark />
           Voice notes
         </span>
-        <span>English only for now</span>
+        <span>English · <span lang="uk">Українська</span> · <span lang="es">Español</span></span>
       </footer>
     </div>
   );

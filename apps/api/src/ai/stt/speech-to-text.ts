@@ -1,7 +1,7 @@
 import type { LanguageCode, Segment } from "@vn/shared";
 
 export interface TranscribeOptions {
-  language: LanguageCode;            // "en" only for now (Task 1.0)
+  language: LanguageCode;            // en | uk | es, forced (Task 1.26)
   diarize: boolean;
 }
 

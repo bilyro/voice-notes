@@ -14,7 +14,7 @@ An app that **listens**, **saves what was said**, and turns it into **notes and 
 | Use cases | Meetings/calls, lessons/lectures, personal voice memos (all three) |
 | Processing | Cloud APIs first, local (offline) processing added later |
 | Cost | **Free stack first ($0)**: Groq free tier for speech + notes, everything self-hosted on one free server. **Paid stack second** (Phase 1b): OpenAI speech-to-text + Claude notes. Switching = 2 env variables |
-| Languages | **English only for now**: speech-to-text is forced to `en` and notes are written in English. Ukrainian, auto-detect and a notes-language setting come later (Phase 2) |
+| Languages | **English, Ukrainian and Spanish** (Task 1.26): the user picks the language on the Record page, speech-to-text is forced to it and the notes are written in it. The app's own interface stays **English only**. Auto-detect and notes in another language than the recording come later (Phase 2) |
 | Build order | Backend + Web first → Desktop → Mobile → Live mode → Local processing |
 | Business model | **Closed-source SaaS**: private GitHub repo, proprietary code (no open-source license), users pay a subscription. Portfolio = public landing page + demo video + case study; give interviewers read access to the repo on request |
 | UI design | Approved: clean white, minimal, Instrument Sans, red only for recording. Spec in `docs/DESIGN.md`, mockups in `docs/design/screens/` |
@@ -1754,6 +1754,29 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **As built:** `QUEUE_PREFIX` is read once in `config.ts` and passed to both queues and to the worker's options. Production and dev keep `bull`, so no queued jobs are lost on deploy. `.env` doesn't need the setting. Verified: with a dev worker running, `pnpm turbo lint typecheck test` is green (9/9, API 25/25, no "locked by another worker"). Redis had 0 `test:*` keys before and 4 `test:notes` + 4 `test:transcribe` after. A real memo then went through the dev worker under `bull:` (ready in 5 s). The README note about stopping the worker is replaced by one about the prefix.
 - [x] **Commit:** `fix(api): separate queue prefix for tests`
 
+### Task 1.26 — Record in Ukrainian and Spanish
+> Decided on 2026-10-22: besides English, you can record in **Ukrainian** and **Spanish**. The transcript and the notes come out in the language of the recording; the app itself (buttons, pages, messages, Markdown headings) stays in English. Auto-detect and a separate notes language stay in Phase 2.
+- [x] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/api/src/ai/notes/*` (prompts, generator interface, chunked base, Groq + Claude adapters), `apps/api/src/jobs/notes.job.ts`, `apps/api/src/ai/stt/speech-to-text.ts`, `apps/api/scripts/try-notes.ts`, `apps/api/scripts/try-stt.ts`, API tests, `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx`, `apps/web/src/components/NotesEditor.tsx`, `apps/web/src/components/Transcript.tsx`, `apps/web/src/pages/LandingPage.tsx`, `CLAUDE.md`, `docs/DESIGN.md`, this plan (§1, Phase 2)
+- [x] **Shared:** `LanguageCode = z.enum(["en", "uk", "es"])` (default stays `en`) and `LANGUAGE_NAMES` (`English`, `Ukrainian`, `Spanish`) used by the prompt and the web app. No migration: `recordings.language` is a text column with default `'en'`.
+- [x] **Speech-to-text:** unchanged; it already forces `rec.language` (Whisper accepts `uk` and `es`).
+- [x] **Notes:** `NotesGenerator.generate(segments, mode, language)`; the system prompt says "Write all notes in <Language>, the language of the recording" (the JSON keys stay English). The map → reduce merge keeps it, because it uses the same system prompt. The dev scripts take an optional language argument.
+- [x] **Record page:** a "Language" select between Title and Microphone: English, Ukrainian (українська), Spanish (español), with the hint "The language people speak in the recording. The transcript and notes use it too." The last choice is remembered in this browser (`localStorage`, wrapped in try/catch). The consent line drops "English only for now".
+- [x] **Detail page:** for a non-English recording the meta line shows the language; the transcript and the notes carry `lang="uk"` / `lang="es"` so screen readers pronounce them correctly.
+- [x] **Landing:** "English only for now" becomes "Record in English, Ukrainian or Spanish" (hero note and footer).
+- [x] **Rules and docs:** CLAUDE.md's "English only" rule, §1 Decisions, the Phase 2 bullet and DESIGN.md (Record form) say what is supported now.
+- [x] **Verify:** API tests: `uk` and `es` are accepted and saved, an unsupported code (`de`) is a 400; a prompt test checks the language line. In headless Chrome, a Ukrainian meeting recorded through the Record page (speech fed in as the microphone) gives a Cyrillic transcript and Ukrainian notes, the detail page shows "Ukrainian" and `lang="uk"`, and the selector remembers Ukrainian on the next visit. A Spanish memo uploaded through the API gives Spanish notes. An English recording still gives English notes. Landing shows the new line. CI green.
+- [x] **As built:**
+  - **`lang` only on the recording's text:** summary, list items, to-do text, transcript lines and the edit fields carry it; headings and the transcript's timestamp buttons stay English.
+  - **Live screen:** shows a second chip ("Ukrainian") next to the mode chip, so you can check before talking.
+  - **Bug found on the way and fixed:** the to-do meta line read "Олена, by до понеділка", because the app added an English "by" to a date that, since Task 1.23, is kept as it was said. English would have had "by by the end of term" too. It is now "owner · date" in the recording's language, the same neutral style as the Markdown export.
+  - **Verified:**
+    - API tests: `uk`/`es` saved, English by default, `de` → 400, plus a prompt test; 28 API tests in all.
+    - Headless Chrome, 23 checks. A Ukrainian meeting recorded through the Record page (macOS voice Lesya fed in as the microphone): 100% Cyrillic transcript, Ukrainian summary, decisions and 3 to-dos with owners and dates in words ("до понеділка"), "Ukrainian" in the meta line, `lang="uk"` on the notes and on all 6 transcript lines, the choice remembered on the next visit.
+    - Through the API: a Spanish memo gave Spanish notes and ideas; an English memo still gave English notes.
+    - Landing and consent text have no "English only" left; no console errors; CI green.
+  - **Quality note:** Groq's free Whisper heard "п'ятницю" as "Татницю" once on the synthetic voice. Ukrainian and Spanish accuracy is something to judge in Task 1b.3.
+- [x] **Commit:** `feat: record in Ukrainian and Spanish`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
@@ -1808,8 +1831,8 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ## 9. Later phases (overview — will be broken into tasks when you get there)
 
-### Phase 2 — Quality, search and Ukrainian (≈2–3 weeks)
-- **Ukrainian support:** add `uk` / `auto` to `LanguageCode`, a language selector on the Record page, a per-user notes-language setting (needs storage, e.g. a `user_settings` table), and a `notesLanguage` parameter in prompts and `NotesGenerator`. Compare STT providers on Ukrainian samples first.
+### Phase 2 — Quality, search and more language options (≈2–3 weeks)
+- **More language options** (recording in Ukrainian and Spanish is done, Task 1.26): `auto` (detect the spoken language), notes in another language than the recording (a per-user setting, e.g. a `user_settings` table, and a separate notes language in prompts and `NotesGenerator`), and a translated interface if needed. Compare STT providers on Ukrainian and Spanish samples (Task 1b.3).
 - Speaker labels (diarization): switch/add an STT adapter that returns speakers (candidate: OpenAI `gpt-4o-transcribe-diarize`); UI to rename "Speaker 1" → a real name (stored per recording).
 - Embeddings for transcript segments (fill the `embedding` column), HNSW index on pgvector.
 - Search page: full-text (`tsvector`) + semantic search combined (the search field is already in the Recordings design).
@@ -1891,7 +1914,7 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 | 0 Foundations | ~1 week | Monorepo, infra, auth, CI (+ catch-up Task 0.9) |
 | 1 Web MVP (free stack) | ~3 weeks | Record → transcript → notes & proposals → edit/export, online for $0 |
 | 1b Paid stack | 1–3 days | OpenAI speech-to-text + Claude notes, cost tracking, quality comparison |
-| 2 Quality, search & Ukrainian | 2–3 weeks | Speakers, search, Q&A over recordings, Ukrainian support |
+| 2 Quality, search & languages | 2–3 weeks | Speakers, search, Q&A over recordings, auto-detect and a separate notes language |
 | 3 Desktop | ~2 weeks | Electron app with call recording |
 | 4 Mobile | 2–3 weeks | Expo app with offline recording |
 | 5 Live mode | ~2 weeks | Real-time transcript |

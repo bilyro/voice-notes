@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { RecordingMode, SavedNotes } from "@vn/shared";
+import type { LanguageCode, RecordingMode, SavedNotes } from "@vn/shared";
 import { Button } from "./Button";
 import styles from "./NotesEditor.module.css";
 
@@ -16,6 +16,8 @@ const LIST_LABEL: Record<ListKey, string> = {
 type Props = {
   notes: SavedNotes;
   mode: RecordingMode;
+  /** language of the notes' text (the labels stay English), so screen readers and spell-check get it right */
+  lang: LanguageCode;
   editing: boolean;
   saving: boolean;
   error: string | null;
@@ -30,13 +32,13 @@ export function NotesEditor(props: Props) {
 
 /* ---------- reading ---------- */
 
-function NotesView({ notes, onToggleDone, saving }: Props) {
+function NotesView({ notes, lang, onToggleDone, saving }: Props) {
   const list = (key: ListKey) =>
     notes[key].length > 0 && (
       <section aria-labelledby={`h-${key}`} className={key === "decisions" ? styles.decisionCard : styles.card}>
         {key === "decisions" && <span className={styles.pin} aria-hidden="true" />}
         <h2 id={`h-${key}`} className={styles.heading}>{LIST_LABEL[key]}</h2>
-        <ul className={styles.list}>{notes[key].map((item, i) => <li key={i}>{item}</li>)}</ul>
+        <ul className={styles.list} lang={lang}>{notes[key].map((item, i) => <li key={i}>{item}</li>)}</ul>
       </section>
     );
 
@@ -45,7 +47,7 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
       {notes.summary && (
         <section aria-labelledby="h-summary" className={styles.card}>
           <h2 id="h-summary" className={styles.heading}>Summary</h2>
-          <p className={styles.summary}>{notes.summary}</p>
+          <p className={styles.summary} lang={lang}>{notes.summary}</p>
         </section>
       )}
 
@@ -57,8 +59,8 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
               <label key={i} className={styles.item}>
                 <input type="checkbox" className={styles.check} checked={a.done} disabled={saving} onChange={() => onToggleDone(i)} />
                 <span className={styles.itemText}>
-                  <span className={a.done ? styles.done : undefined}>{a.text}</span>
-                  <span className={styles.meta}>{ownerLine(a.owner, a.dueDate)}</span>
+                  <span className={a.done ? styles.done : undefined} lang={lang}>{a.text}</span>
+                  <span className={styles.meta}>{ownerLine(a.owner, a.dueDate, lang)}</span>
                 </span>
               </label>
             ))}
@@ -72,7 +74,7 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
       {notes.concepts.length > 0 && (
         <section aria-labelledby="h-concepts" className={styles.card}>
           <h2 id="h-concepts" className={styles.heading}>Concepts</h2>
-          <ul className={styles.list}>
+          <ul className={styles.list} lang={lang}>
             {notes.concepts.map((c, i) => <li key={i}><strong>{c.term}</strong>: {c.explanation}</li>)}
           </ul>
         </section>
@@ -85,7 +87,7 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
         <section aria-labelledby="h-proposals" className={styles.ideaCard}>
           <h2 id="h-proposals" className={styles.boxHeading}>Suggested next steps</h2>
           <p className={styles.boxNote}>Ideas from the assistant. Nobody said these in the meeting.</p>
-          <ul className={styles.list}>{notes.proposals.map((p, i) => <li key={i}>{p}</li>)}</ul>
+          <ul className={styles.list} lang={lang}>{notes.proposals.map((p, i) => <li key={i}>{p}</li>)}</ul>
         </section>
       )}
 
@@ -96,12 +98,13 @@ function NotesView({ notes, onToggleDone, saving }: Props) {
   );
 }
 
-/** "Marta, by Friday" / "Marta" / "By Friday" / "No owner or date yet" */
-function ownerLine(owner: string | null, due: string | null) {
-  if (owner && due) return `${owner}, by ${due}`;
-  if (owner) return owner;
-  if (due) return `By ${due}`;
-  return "No owner or date yet";
+/**
+ * "Marta · Friday, April 11" / "Олена · до понеділка" / "Marta" / "No owner or date yet".
+ * No English "by": the due date is kept as it was said (Task 1.23), often with its own "by" / "до" / "para".
+ */
+function ownerLine(owner: string | null, due: string | null, lang: LanguageCode) {
+  if (!owner && !due) return "No owner or date yet";
+  return <span lang={lang}>{[owner, due].filter(Boolean).join(" · ")}</span>;
 }
 
 /* ---------- editing ---------- */
@@ -109,7 +112,7 @@ function ownerLine(owner: string | null, due: string | null) {
 const lines = (text: string) => text.split("\n").map((l) => l.trim()).filter(Boolean);
 const orNull = (s: string) => s.trim() || null;
 
-function NotesForm({ notes, mode, saving, error, onSave, onCancel }: Props) {
+function NotesForm({ notes, mode, lang, saving, error, onSave, onCancel }: Props) {
   const [summary, setSummary] = useState(notes.summary);
   const [text, setText] = useState(() =>
     Object.fromEntries((Object.keys(LIST_LABEL) as ListKey[]).map((k) => [k, notes[k].join("\n")])) as Record<ListKey, string>,
@@ -140,6 +143,7 @@ function NotesForm({ notes, mode, saving, error, onSave, onCancel }: Props) {
         </label>
         <textarea
           id={`f-${k}`}
+          lang={lang}
           className={styles.textarea}
           rows={Math.max(3, notes[k].length + 1)}
           value={text[k]}
@@ -152,7 +156,7 @@ function NotesForm({ notes, mode, saving, error, onSave, onCancel }: Props) {
     <form className={styles.form} onSubmit={(e) => { e.preventDefault(); save(); }}>
       <div className={styles.field}>
         <label htmlFor="f-summary" className={styles.label}>Summary</label>
-        <textarea id="f-summary" className={styles.textarea} rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} />
+        <textarea id="f-summary" lang={lang} className={styles.textarea} rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} />
       </div>
 
       <fieldset className={styles.fieldset}>
@@ -161,9 +165,9 @@ function NotesForm({ notes, mode, saving, error, onSave, onCancel }: Props) {
           const set = (patch: Partial<typeof a>) => setItems(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
           return (
             <div key={i} className={styles.row}>
-              <input aria-label={`Action item ${i + 1}`} className={`${styles.input} ${styles.grow}`} value={a.text} onChange={(e) => set({ text: e.target.value })} />
-              <input aria-label={`Owner of action item ${i + 1}`} placeholder="Owner" className={styles.input} value={a.owner} onChange={(e) => set({ owner: e.target.value })} />
-              <input aria-label={`Due date of action item ${i + 1}`} placeholder="Due" className={styles.input} value={a.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
+              <input lang={lang} aria-label={`Action item ${i + 1}`} className={`${styles.input} ${styles.grow}`} value={a.text} onChange={(e) => set({ text: e.target.value })} />
+              <input lang={lang} aria-label={`Owner of action item ${i + 1}`} placeholder="Owner" className={styles.input} value={a.owner} onChange={(e) => set({ owner: e.target.value })} />
+              <input lang={lang} aria-label={`Due date of action item ${i + 1}`} placeholder="Due" className={styles.input} value={a.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
               <Button type="button" variant="secondary" size="small" onClick={() => setItems(items.filter((_, j) => j !== i))}>Remove</Button>
             </div>
           );
@@ -185,8 +189,8 @@ function NotesForm({ notes, mode, saving, error, onSave, onCancel }: Props) {
             const set = (patch: Partial<typeof c>) => setConcepts(concepts.map((x, j) => (j === i ? { ...x, ...patch } : x)));
             return (
               <div key={i} className={styles.row}>
-                <input aria-label={`Concept ${i + 1}`} placeholder="Term" className={styles.input} value={c.term} onChange={(e) => set({ term: e.target.value })} />
-                <input aria-label={`Explanation of concept ${i + 1}`} placeholder="Short explanation" className={`${styles.input} ${styles.grow}`} value={c.explanation} onChange={(e) => set({ explanation: e.target.value })} />
+                <input lang={lang} aria-label={`Concept ${i + 1}`} placeholder="Term" className={styles.input} value={c.term} onChange={(e) => set({ term: e.target.value })} />
+                <input lang={lang} aria-label={`Explanation of concept ${i + 1}`} placeholder="Short explanation" className={`${styles.input} ${styles.grow}`} value={c.explanation} onChange={(e) => set({ explanation: e.target.value })} />
                 <Button type="button" variant="secondary" size="small" onClick={() => setConcepts(concepts.filter((_, j) => j !== i))}>Remove</Button>
               </div>
             );

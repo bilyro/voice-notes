@@ -1,8 +1,9 @@
-import type { Notes, RecordingMode, Segment } from "@vn/shared";
+import type { LanguageCode, Notes, RecordingMode, Segment } from "@vn/shared";
 
 export interface NotesGenerator {
   readonly name: string;
-  generate(segments: Segment[], mode: RecordingMode): Promise<Notes>;
+  /** `language` is the language of the recording; the notes are written in it */
+  generate(segments: Segment[], mode: RecordingMode, language: LanguageCode): Promise<Notes>;
 }
 
 /** "[12:05] Speaker 1: text" — timestamps help the model and let us link back later */

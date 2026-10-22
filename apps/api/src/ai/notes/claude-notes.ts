@@ -1,7 +1,7 @@
 // PAID stage (Phase 1b)
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { Notes, type RecordingMode } from "@vn/shared";
+import { Notes, type LanguageCode, type RecordingMode } from "@vn/shared";
 import { config } from "../../config.js";
 import { ChunkedNotesGenerator } from "./chunked-notes.js";
 import { systemPrompt } from "./prompts.js";
@@ -12,11 +12,11 @@ export class ClaudeNotes extends ChunkedNotesGenerator {
   protected readonly pauseBetweenCallsMs = 0;
   private client = new Anthropic();              // reads ANTHROPIC_API_KEY
 
-  protected async callModel(mode: RecordingMode, content: string): Promise<Notes> {
+  protected async callModel(mode: RecordingMode, language: LanguageCode, content: string): Promise<Notes> {
     const res = await this.client.messages.create({
       model: config.NOTES_MODEL,
       max_tokens: 8192,                     // notes for a long lecture can exceed 4096 tokens
-      system: systemPrompt(mode),
+      system: systemPrompt(mode, language),
       tools: [{
         name: "save_notes",
         description: "Save the structured notes for this recording.",

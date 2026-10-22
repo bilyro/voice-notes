@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
+import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { Button } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
@@ -161,6 +161,7 @@ export function RecordingDetailPage() {
         <span className={styles.chip}>{MODE_LABEL[rec.mode]}</span>
         <span>{longDate}</span>
         {rec.durationMs !== null && <span className="tabular">{longDuration(rec.durationMs)}</span>}
+        {rec.language !== "en" && <span>{LANGUAGE_NAMES[rec.language]}</span>}
       </div>
 
       <div className={styles.actions}>
@@ -262,6 +263,7 @@ export function RecordingDetailPage() {
               <NotesEditor
                 notes={notes}
                 mode={rec.mode}
+                lang={rec.language}
                 editing={editing}
                 saving={save.isPending}
                 error={saveError}
@@ -272,7 +274,7 @@ export function RecordingDetailPage() {
             </>
           ) : (
             <div className={styles.transcript}>
-              <Transcript segments={data.segments} currentMs={timeMs} onSeek={seek} />
+              <Transcript segments={data.segments} lang={rec.language} currentMs={timeMs} onSeek={seek} />
             </div>
           )}
         </Tabs>
@@ -280,7 +282,7 @@ export function RecordingDetailPage() {
         data.segments.length > 0 && (
           <section aria-labelledby="h-transcript" className={styles.transcriptOnly}>
             <h2 id="h-transcript">Transcript</h2>
-            <Transcript segments={data.segments} currentMs={timeMs} onSeek={seek} />
+            <Transcript segments={data.segments} lang={rec.language} currentMs={timeMs} onSeek={seek} />
           </section>
         )
       )}

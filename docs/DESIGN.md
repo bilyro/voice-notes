@@ -143,6 +143,7 @@ Writing: sentence case everywhere, no ALL CAPS labels, plain verbs on buttons ("
 | **Look of every screen** (Index cards; the boards below win over the older white mockups wherever they differ) | design canvas, row "Chosen: Index cards": `CardsTokens`, `CardsRecordings`, `CardsDetail`, `CardsRecord`, `CardsSignIn`; landing: `StyleCorkboard` | Task 1.20 |
 | App shell (sidebar + content) | any screen | Task 0.7 |
 | New recording | `screens/NewRecording.dc.html` | Task 1.11 |
+| New recording: "Language" select between Title and Microphone (English, Ukrainian — українська, Spanish — español) with a 14px muted hint under it, the same input style as the microphone select; remembered per browser. While recording, a non-English language shows as a second chip next to the mode chip | Task 1.26 (no mockup, one field) | Task 1.26 |
 | Recording in progress | `screens/PhoneRecording.dc.html` (same layout, centered in the content column on desktop) | Task 1.11 (web), Phase 4 (native app) |
 | Recording in progress, no connection: the hint under the controls turns into an ink 600 status "No connection. Keep recording: the last m:ss is kept here…"; after Stop, "Saving… waiting for the connection…" in the same style. Ink, not red: nothing is wrong yet | Task 1.22 (no mockup, text change only) | Task 1.22 |
 | Recordings | `screens/Recordings.dc.html` | Task 1.12 |

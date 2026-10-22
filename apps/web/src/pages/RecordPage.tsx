@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import type { RecordingMode } from "@vn/shared";
+import { LANGUAGE_NAMES, LanguageCode, type RecordingMode } from "@vn/shared";
 import { Button } from "../components/Button";
 import { InfoNote } from "../components/InfoNote";
 import { RecordButton } from "../components/RecordButton";
@@ -29,6 +29,23 @@ const BARS = 40;                       // waveform history, one bar per 100 ms l
 const JSON_HEADERS = { "Content-Type": "application/json" };
 const NO_UPLOADS: UploadState = { saved: 0, pending: 0, offline: false };
 
+// the native name helps people find their language; the UI itself stays English
+const LANGUAGES: { value: LanguageCode; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "uk", label: "Ukrainian — українська" },
+  { value: "es", label: "Spanish — español" },
+];
+const LANGUAGE_KEY = "vn.recording-language";
+
+/** The last language picked in this browser (a convenience only: storage may be blocked or empty). */
+function savedLanguage(): LanguageCode {
+  try {
+    return LanguageCode.catch("en").parse(localStorage.getItem(LANGUAGE_KEY));
+  } catch {
+    return "en";
+  }
+}
+
 const levelLabel = (level: number) => (level < 0.02 ? "No sound" : level < 0.08 ? "Low" : "Good");
 
 export function RecordPage() {
@@ -37,6 +54,7 @@ export function RecordPage() {
 
   const [mode, setMode] = useState<RecordingMode>("meeting");
   const [title, setTitle] = useState("");
+  const [language, setLanguage] = useState<LanguageCode>(savedLanguage);
   const [deviceId, setDeviceId] = useState("");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [preview, setPreview] = useState<MediaStream | null>(null);
@@ -108,7 +126,7 @@ export function RecordPage() {
       ({ id } = await api<{ id: string }>("/recordings", {
         method: "POST",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ mode, title: title.trim() || undefined, mimeType: pickMimeType() || "audio/webm", source: "web" }),
+        body: JSON.stringify({ mode, title: title.trim() || undefined, language, mimeType: pickMimeType() || "audio/webm", source: "web" }),
       }));
       idRef.current = id;
       uploaderRef.current = new ChunkUploader(id, setUpload);
@@ -196,6 +214,24 @@ export function RecordPage() {
         </div>
 
         <div className={styles.field}>
+          <label htmlFor="language" className={styles.label}>Language</label>
+          <select
+            id="language"
+            className={styles.input}
+            value={language}
+            aria-describedby="language-hint"
+            onChange={(e) => {
+              const value = LanguageCode.parse(e.target.value);
+              setLanguage(value);
+              try { localStorage.setItem(LANGUAGE_KEY, value); } catch { /* private window: just not remembered */ }
+            }}
+          >
+            {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+          </select>
+          <p id="language-hint" className={styles.hint}>The language people speak in the recording. The transcript and notes use it too.</p>
+        </div>
+
+        <div className={styles.field}>
           <label htmlFor="mic" className={styles.label}>Microphone</label>
           <select id="mic" className={styles.input} value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
             {devices.length === 0 && <option value="">Default microphone</option>}
@@ -220,7 +256,7 @@ export function RecordPage() {
 
         <div className={styles.start}>
           <RecordButton action="start" label="Start recording" onClick={startRecording} disabled={phase === "starting" || !!micError} />
-          <p className={styles.consent}>Tell everyone they are being recorded. Audio is saved every 10 seconds. English only for now.</p>
+          <p className={styles.consent}>Tell everyone they are being recorded. Audio is saved every 10 seconds.</p>
           {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
       </div>
@@ -233,7 +269,10 @@ export function RecordPage() {
   return (
     <div className={`${page.page} ${page.form} ${styles.live}`}>
       <div className={styles.liveTop}>
-        <span className={styles.chip}>{MODES.find((m) => m.value === mode)!.label}</span>
+        <span className={styles.chips}>
+          <span className={styles.chip}>{MODES.find((m) => m.value === mode)!.label}</span>
+          {language !== "en" && <span className={styles.chip}>{LANGUAGE_NAMES[language]}</span>}
+        </span>
         {phase === "live" && !paused && (
           <span className={styles.badge}>
             <span className={styles.liveDot} aria-hidden="true" />

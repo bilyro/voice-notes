@@ -128,10 +128,21 @@ describe("recordings", () => {
     const cookie = await signUp();
     const bad = await app.inject({ method: "POST", url: "/api/recordings", headers: { cookie }, payload: { mode: "podcast" } });
     expect(bad.statusCode).toBe(400);
-    const ukrainian = await app.inject({
-      method: "POST", url: "/api/recordings", headers: { cookie }, payload: { ...createBody, language: "uk" },
+    const german = await app.inject({
+      method: "POST", url: "/api/recordings", headers: { cookie }, payload: { ...createBody, language: "de" },
     });
-    expect(ukrainian.statusCode).toBe(400);
+    expect(german.statusCode).toBe(400);   // only en, uk, es
+  });
+
+  it("saves the language of the recording (Ukrainian, Spanish; English by default)", async () => {
+    const cookie = await signUp();
+    for (const language of ["uk", "es", undefined] as const) {
+      const created = await app.inject({ method: "POST", url: "/api/recordings", headers: { cookie }, payload: { ...createBody, language } });
+      expect(created.statusCode).toBe(201);
+      const { id } = created.json<{ id: string }>();
+      const got = await app.inject({ method: "GET", url: `/api/recordings/${id}`, headers: { cookie } });
+      expect(got.json<{ recording: { language: string } }>().recording.language).toBe(language ?? "en");
+    }
   });
 
   it("saves edited notes as a new version and deletes audio with the recording", async () => {

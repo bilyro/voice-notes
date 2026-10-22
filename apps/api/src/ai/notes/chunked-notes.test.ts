@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Notes, RecordingMode, Segment } from "@vn/shared";
+import type { LanguageCode, Notes, RecordingMode, Segment } from "@vn/shared";
 import { batchForMerge, ChunkedNotesGenerator, splitByChars } from "./chunked-notes.js";
 
 const notes = (summary: string): Notes => ({
@@ -61,7 +61,7 @@ class TestNotes extends ChunkedNotesGenerator {
   protected readonly pauseBetweenCallsMs = 0;
   calls: string[] = [];
 
-  protected async callModel(_mode: RecordingMode, content: string): Promise<Notes> {
+  protected async callModel(_mode: RecordingMode, _language: LanguageCode, content: string): Promise<Notes> {
     this.calls.push(content);
     if (content.startsWith("Merge these partial notes")) {
       const batch = JSON.parse(content.slice(content.indexOf("["))) as Notes[];
@@ -77,13 +77,13 @@ describe("ChunkedNotesGenerator.generate", () => {
 
   it("uses one call when the transcript fits", async () => {
     const gen = new TestNotes();
-    await gen.generate(segments(5), "meeting");
+    await gen.generate(segments(5), "meeting", "en");
     expect(gen.calls).toHaveLength(1);
   });
 
   it("maps a long transcript in parts and reduces to exactly one result", async () => {
     const gen = new TestNotes();
-    const result = await gen.generate(segments(2_000), "lesson");   // ≈ 90k chars → ~90 parts
+    const result = await gen.generate(segments(2_000), "lesson", "en");   // ≈ 90k chars → ~90 parts
     const mapCalls = gen.calls.filter((c) => !c.startsWith("Merge"));
     expect(mapCalls.length).toBeGreaterThan(50);
     // every part's notes made it into the single final result

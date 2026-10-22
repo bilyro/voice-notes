@@ -1,11 +1,13 @@
-// Try speech-to-text on a local file: pnpm --filter @vn/api tsx scripts/try-stt.ts <audio file>
+// Try speech-to-text on a local file: pnpm --filter @vn/api tsx scripts/try-stt.ts <audio file> [en|uk|es]
 // Builds the adapter from STT_PROVIDER here; Task 1.6 moves that choice into src/ai/providers.ts.
 import OpenAI from "openai";
+import { LanguageCode } from "@vn/shared";
 import { config, GROQ_BASE_URL } from "../src/config.js";
 import { OpenAiCompatibleStt } from "../src/ai/stt/openai-compatible-stt.js";
 
 const file = process.argv[2];
-if (!file) throw new Error("Usage: tsx scripts/try-stt.ts <audio file>");
+if (!file) throw new Error("Usage: tsx scripts/try-stt.ts <audio file> [en|uk|es]");
+const forced = LanguageCode.parse(process.argv[3] ?? "en");
 
 const stt =
   config.STT_PROVIDER === "groq"
@@ -19,7 +21,7 @@ function required(name: "GROQ_API_KEY" | "OPENAI_API_KEY") {
 }
 
 const started = Date.now();
-const { segments, language } = await stt.transcribe(file, { language: "en", diarize: false });
+const { segments, language } = await stt.transcribe(file, { language: forced, diarize: false });
 const time = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 for (const s of segments) console.log(`[${time(s.startMs)}–${time(s.endMs)}] ${s.text}`);
 console.log(`\n${stt.name}: ${segments.length} segments, language=${language ?? "?"}, ${Date.now() - started} ms`);

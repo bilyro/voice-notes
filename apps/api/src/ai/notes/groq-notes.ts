@@ -1,7 +1,7 @@
 // FREE stage
 import OpenAI from "openai";
 import { z } from "zod";
-import { Notes, type RecordingMode } from "@vn/shared";
+import { Notes, type LanguageCode, type RecordingMode } from "@vn/shared";
 import { config, GROQ_BASE_URL } from "../../config.js";
 import { ChunkedNotesGenerator } from "./chunked-notes.js";
 import { systemPrompt } from "./prompts.js";
@@ -16,7 +16,7 @@ export class GroqNotes extends ChunkedNotesGenerator {
   protected readonly pauseBetweenCallsMs = 60_000;                   // free tier: low tokens/minute
   private client = new OpenAI({ apiKey: config.GROQ_API_KEY, baseURL: GROQ_BASE_URL });
 
-  protected async callModel(mode: RecordingMode, content: string): Promise<Notes> {
+  protected async callModel(mode: RecordingMode, language: LanguageCode, content: string): Promise<Notes> {
     const res = await this.client.chat.completions.create({
       model: config.GROQ_NOTES_MODEL,
       // gpt-oss "thinks" before answering and those tokens count as output; on the free tier
@@ -24,7 +24,7 @@ export class GroqNotes extends ChunkedNotesGenerator {
       reasoning_effort: "low",
       response_format: { type: "json_schema", json_schema: { name: "notes", strict: true, schema: notesSchema } },
       messages: [
-        { role: "system", content: systemPrompt(mode) },
+        { role: "system", content: systemPrompt(mode, language) },
         { role: "user", content },
       ],
     });
