@@ -1781,13 +1781,25 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.27 — Upload an audio file
 > Drop in an existing recording (a phone voice memo, a Zoom/Teams export) instead of recording live. It uses the same pipeline and chunk upload as live recording, which the desktop and mobile apps will reuse too.
-- [ ] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `apps/web/src/recorder/file-upload.ts` (new), `docs/DESIGN.md`
-- [ ] **Shared:** `source` gains `"upload"`.
-- [ ] **Record page:** under the record button, a secondary "Upload an audio file" button (a hidden `<input type="file" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.ogg,.webm">`). Mode, title and language come from the same form; the title defaults to the file name without its extension.
-- [ ] **In the browser:** read the duration from the file's metadata (`<audio>` `loadedmetadata`). Refuse it with a clear message if it isn't playable audio or is longer than 2 hours (the free speech-to-text takes 25 MB per file, which is about 2 h after our 24 kbps conversion). Then create the recording, slice the file into 5 MB byte chunks (the API takes 10 MB per chunk) and send them through `ChunkUploader` (Task 1.22 retries included), then `finish` with the real duration. No API change: the worker joins byte chunks and ffmpeg reads the original format.
-- [ ] **Progress:** "Uploading… 40%" with a progress bar, a Cancel button (deletes the half-uploaded recording) and the same no-connection messages as live recording. When done, go to the recording.
-- [ ] **Verify:** `.m4a`, `.mp3` and `.wav` files made with ffmpeg from test speech each give a transcript and notes; a 2 h 10 min file and a `.txt` renamed to `.mp3` are refused with their messages before anything is uploaded; a 60 s network drop during upload recovers on its own; Cancel leaves nothing behind; the monthly minute limit still applies; CI green.
-- [ ] **Commit:** `feat(web): upload an audio file`
+- [x] **Files:** `packages/shared/src/schemas/recording.ts`, `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `apps/web/src/recorder/file-upload.ts` (new), `apps/web/src/recorder/chunk-uploader.ts` (Cancel), `apps/api/src/audio/prepare-audio.ts` (+ test: `-vn`, see As built), `docs/DESIGN.md`
+- [x] **Shared:** `source` gains `"upload"`.
+- [x] **Record page:** under the record button, a secondary "Upload an audio file" button (a hidden `<input type="file" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.ogg,.webm">`). Mode, title and language come from the same form; the title defaults to the file name without its extension.
+- [x] **In the browser:** read the duration from the file's metadata (`<audio>` `loadedmetadata`). Refuse it with a clear message if it isn't playable audio or is longer than 2 hours (the free speech-to-text takes 25 MB per file, which is about 2 h after our 24 kbps conversion). Then create the recording, slice the file into 5 MB byte chunks (the API takes 10 MB per chunk) and send them through `ChunkUploader` (Task 1.22 retries included), then `finish` with the real duration. No API change: the worker joins byte chunks and ffmpeg reads the original format.
+- [x] **Progress:** "Uploading… 40%" with a progress bar, a Cancel button (deletes the half-uploaded recording) and the same no-connection messages as live recording. When done, go to the recording.
+- [x] **Verify:** `.m4a`, `.mp3` and `.wav` files made with ffmpeg from test speech each give a transcript and notes; a 2 h 10 min file and a `.txt` renamed to `.mp3` are refused with their messages before anything is uploaded; a 60 s network drop during upload recovers on its own; Cancel leaves nothing behind; the monthly minute limit still applies; CI green.
+- [x] **As built:**
+  - **One small API change after all:** the plan said none was needed, but a video file (a Zoom `.mp4`) made the worker's ffmpeg try to re-encode the picture into the `.ogg` and fail ("Encoder not found"). `prepareAudio` now passes `-vn` (sound only), with an API test that turns a 2-chunk `.mp4` into one Opus audio stream.
+  - **Cancel:** `ChunkUploader.cancel()` aborts the request in flight and every waiting retry (an `AbortSignal` passed to `fetch` and to the retry wait), so Cancel also works while offline. The page then deletes the recording. `save()` checks that its uploader is still the current one, so a cancelled upload never calls `finish`.
+  - **Duration:** read from the file in the browser. WebM files from MediaRecorder have no duration in their header, so the code seeks far ahead to make the browser work it out.
+  - **Verified in headless Chrome, 24 checks:**
+    - `.m4a` (English memo), `.mp3` (Spanish memo), `.mp4` with video (English meeting) and a 12 MB `.wav` (Ukrainian meeting, 3 chunks, the whole 2:08 transcribed) each reached Ready, with `source = upload`, the title from the file name and the right language, mode and duration.
+    - A 2 h 10 min file and a text file named `.mp3` were refused with their messages, and nothing was created.
+    - With the chunk uploads cut: "No connection…" at 0%, no error, finished on its own when the connection returned.
+    - Cancel while offline: back to the form within 5 s, nothing left.
+    - The monthly limit: the API's message with Try again and Cancel, and Cancel cleaned up.
+    - Phone width: no sideways scroll. No page errors. CI green (29 API tests).
+  - **Possible follow-up:** the monthly limit is checked at `finish`, so a big file uploads completely before it is refused. A "minutes left" check before uploading would save that wait.
+- [x] **Commit:** `feat(web): upload an audio file`
 
 ### Task 1.28 — Search recordings
 > The search field from the Recordings mockup ("Search titles, transcripts and notes"). Full-text search now; meaning-based (semantic) search stays in Phase 2.

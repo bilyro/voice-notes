@@ -9,6 +9,7 @@ import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
 import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
+import { checkAudioFile, sliceFile, titleFromFileName, UPLOAD_ACCEPT } from "../recorder/file-upload";
 import { useAudioLevel } from "../recorder/use-audio-level";
 import { CHUNK_MS, pickMimeType, useRecorder } from "../recorder/use-recorder";
 import page from "./Page.module.css";
@@ -60,10 +61,13 @@ export function RecordPage() {
   const [preview, setPreview] = useState<MediaStream | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
 
-  const [phase, setPhase] = useState<"setup" | "starting" | "live" | "saving">("setup");
+  const [phase, setPhase] = useState<"setup" | "starting" | "live" | "saving" | "uploading">("setup");
   const [error, setError] = useState<string | null>(null);
   const [upload, setUpload] = useState<UploadState>(NO_UPLOADS);
   const [elapsed, setElapsed] = useState(0);
+  const [file, setFile] = useState<File | null>(null);          // an uploaded file instead of the microphone (Task 1.27)
+  const [cancelling, setCancelling] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const idRef = useRef<string | null>(null);
   const uploaderRef = useRef<ChunkUploader | null>(null);
@@ -150,6 +154,55 @@ export function RecordPage() {
     await save();
   }
 
+  /** Upload an existing file: checked here first, then the same chunks, retries and finish as a live recording. */
+  async function uploadFile(chosen: File) {
+    setError(null);
+    setPhase("starting");
+    let durationMs: number;
+    try {
+      durationMs = await checkAudioFile(chosen);
+    } catch (e) {
+      setPhase("setup");
+      return setError((e as Error).message);
+    }
+    let id: string;
+    try {
+      ({ id } = await api<{ id: string }>("/recordings", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          mode, language, source: "upload",
+          title: title.trim() || titleFromFileName(chosen.name) || undefined,
+          mimeType: chosen.type || "application/octet-stream",
+        }),
+      }));
+    } catch {
+      setPhase("setup");
+      return setError("The recording could not be created. Check your connection, then try again.");
+    }
+    const uploader = new ChunkUploader(id, setUpload);
+    idRef.current = id;
+    uploaderRef.current = uploader;
+    durationRef.current = durationMs;
+    setUpload(NO_UPLOADS);
+    setFile(chosen);
+    setPhase("uploading");
+    sliceFile(chosen).forEach((blob, i) => uploader.enqueue(blob, i));
+    await save();
+  }
+
+  async function cancelUpload() {
+    const uploader = uploaderRef.current;
+    uploaderRef.current = null;                 // save() sees this and won't finish the recording
+    setCancelling(true);
+    await uploader?.cancel();
+    await api(`/recordings/${idRef.current}`, { method: "DELETE" }).catch(() => {});
+    setCancelling(false);
+    setFile(null);
+    setError(null);
+    setPhase("setup");
+  }
+
   async function save() {
     setError(null);
     const id = idRef.current!;
@@ -157,8 +210,10 @@ export function RecordPage() {
     try {
       await uploader.flush();
     } catch {
+      if (uploaderRef.current !== uploader) return;   // cancelled meanwhile
       return setError("Some audio could not be uploaded. Check your connection, then try again.");
     }
+    if (uploaderRef.current !== uploader) return;     // the upload was cancelled
     if (uploader.count === 0) {
       api(`/recordings/${id}`, { method: "DELETE" }).catch(() => {});
       setPhase("setup");
@@ -257,7 +312,59 @@ export function RecordPage() {
         <div className={styles.start}>
           <RecordButton action="start" label="Start recording" onClick={startRecording} disabled={phase === "starting" || !!micError} />
           <p className={styles.consent}>Tell everyone they are being recorded. Audio is saved every 10 seconds.</p>
+          <div className={styles.upload}>
+            <span className={styles.or} aria-hidden="true">or</span>
+            <Button variant="secondary" onClick={() => fileInput.current?.click()} disabled={phase === "starting"} aria-describedby="upload-hint">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="M7 8l5-5 5 5" /><path d="M5 21h14" /></svg>
+              Upload an audio file
+            </Button>
+            <p id="upload-hint" className={styles.consent}>A voice memo or a meeting export (.m4a, .mp3, .wav, .mp4…), up to 2 hours.</p>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={UPLOAD_ACCEPT}
+              hidden
+              onChange={(e) => {
+                const chosen = e.target.files?.[0];
+                e.target.value = "";            // choosing the same file again still fires onChange
+                if (chosen) void uploadFile(chosen);
+              }}
+            />
+          </div>
           {error && <p className={styles.error} role="alert">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "uploading" && file) {
+    const total = Math.max(1, uploaderRef.current?.count ?? 1);
+    const percent = Math.floor((upload.saved / total) * 100);
+    return (
+      <div className={`${page.page} ${page.form}`}>
+        <h1>Uploading</h1>
+        <div className={styles.start}>
+          <p className={styles.fileName}>{file.name}</p>
+          <p className={styles.consent}>
+            <span className="tabular">{formatDuration(durationRef.current)}</span> · {(file.size / 1024 / 1024).toFixed(1)} MB
+          </p>
+          <span className={styles.progress} role="progressbar" aria-label="Upload" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+            <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+          </span>
+          {!error && (
+            <p className={`${styles.consent} ${upload.offline ? styles.offlineNow : ""}`} role="status">
+              {upload.offline
+                ? "No connection. The upload continues when you are back online. Keep this page open."
+                : percent < 100 ? `Uploading… ${percent}%` : "Saving…"}
+            </p>
+          )}
+          {error && (
+            <>
+              <p className={styles.error} role="alert">{error}</p>
+              <Button variant="secondary" onClick={tryAgain}>Try again</Button>
+            </>
+          )}
+          <Button variant="secondary" onClick={cancelUpload} disabled={cancelling}>{cancelling ? "Cancelling…" : "Cancel upload"}</Button>
         </div>
       </div>
     );

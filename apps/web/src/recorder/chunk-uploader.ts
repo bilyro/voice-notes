@@ -11,16 +11,18 @@ export type UploadState = {
 
 const MAX_WAIT_MS = 15_000;
 
-/** Resolves after `ms`, or as soon as the browser says it is back online. */
-function waitOrOnline(ms: number) {
+/** Resolves after `ms`, as soon as the browser says it is back online, or when `signal` aborts (Cancel). */
+function waitOrOnline(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve) => {
     const done = () => {
       clearTimeout(timer);
       window.removeEventListener("online", done);
+      signal.removeEventListener("abort", done);
       resolve();
     };
     const timer = setTimeout(done, ms);
     window.addEventListener("online", done);
+    signal.addEventListener("abort", done);
   });
 }
 
@@ -36,6 +38,7 @@ export class ChunkUploader {
   private recordingId: string;
   private onChange?: (state: UploadState) => void;
   private offline = false;
+  private cancelled = new AbortController();
   count = 0;
 
   constructor(recordingId: string, onChange?: (state: UploadState) => void) {
@@ -50,17 +53,21 @@ export class ChunkUploader {
   }
 
   private async upload(blob: Blob, index: number) {
+    const { signal } = this.cancelled;
     for (let attempt = 1; ; attempt++) {
+      if (signal.aborted) return;
       try {
         await api(`/recordings/${this.recordingId}/chunks/${index}`, {
           method: "PUT",
           headers: { "Content-Type": "application/octet-stream" },
           body: blob,
+          signal,
         });
         this.stored.add(index);
         this.offline = false;
         return this.report();
       } catch (e) {
+        if (signal.aborted) return;                 // cancelled: not a connection problem
         if (isRefusal(e)) {
           // e.g. the recording was deleted elsewhere: retrying can't help; keep the chain alive for the next ones
           this.failed.push({ blob, index });
@@ -68,7 +75,7 @@ export class ChunkUploader {
         }
         this.offline = true;
         this.report();
-        await waitOrOnline(Math.min(1000 * 2 ** attempt, MAX_WAIT_MS));
+        await waitOrOnline(Math.min(1000 * 2 ** attempt, MAX_WAIT_MS), signal);
       }
     }
   }
@@ -83,6 +90,12 @@ export class ChunkUploader {
   async flush() {
     await this.chain;
     if (this.failed.length) throw new Error("Some audio failed to upload");
+  }
+
+  /** Stops uploading: aborts the request in flight and every retry. Resolves once nothing is being sent any more. */
+  async cancel() {
+    this.cancelled.abort();
+    await this.chain;
   }
 
   /** Queues the refused chunks again (the blobs are kept in memory until they upload). */

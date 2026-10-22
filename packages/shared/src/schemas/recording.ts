@@ -12,7 +12,7 @@ export const CreateRecordingInput = z.object({
   mode: RecordingMode,
   language: LanguageCode.default("en"),
   mimeType: z.string(),                     // e.g. "audio/webm;codecs=opus"
-  source: z.enum(["web", "desktop", "mobile"]),
+  source: z.enum(["web", "desktop", "mobile", "upload"]),   // "upload": an existing file (Task 1.27)
 });
 
 export const Recording = z.object({

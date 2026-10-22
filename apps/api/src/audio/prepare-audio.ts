@@ -36,7 +36,8 @@ export async function prepareAudio(recordingId: string, chunkCount: number) {
   file.end();
   await done;
 
-  await ffmpeg(["-i", raw, "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "24k", out]);
+  // -vn: an uploaded video (a Zoom .mp4) keeps only its sound
+  await ffmpeg(["-i", raw, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "24k", out]);
   await storage.put(keys.audio(recordingId), await readFile(out), "audio/ogg");
   return { localPath: out, dir };
 }
