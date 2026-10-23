@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type Segment, type ShareLink } from "@vn/shared";
+import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type ShareLink, type TranscriptLine } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { Button } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
+import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { Tabs } from "../components/Tabs";
 import { Transcript } from "../components/Transcript";
 import { api, ApiError } from "../lib/api";
@@ -14,13 +15,18 @@ import styles from "./RecordingDetailPage.module.css";
 
 type Detail = {
   recording: Recording;
-  segments: Segment[];
+  segments: TranscriptLine[];        // with ids, so a line can be edited (Task 1.38)
   notes: { version: number; editedByUser: boolean; content: unknown } | null;
   shareToken: string | null;          // the read-only link is on (Task 1.30)
 };
 
 const MODE_LABEL: Record<RecordingMode, string> = { meeting: "Meeting", lesson: "Lesson", memo: "Voice memo" };
 const PROCESSING: Recording["status"][] = ["uploaded", "transcribing", "summarizing"];
+const MODE_OPTIONS: { value: RecordingMode; label: string; tone: Tone }[] = [
+  { value: "meeting", label: "Meeting", tone: "decision" },
+  { value: "lesson", label: "Lesson", tone: "todo" },
+  { value: "memo", label: "Voice memo", tone: "idea" },
+];
 const STEPS: { status: Recording["status"]; label: string }[] = [
   { status: "uploaded", label: "Uploaded" },
   { status: "transcribing", label: "Transcribing" },
@@ -61,6 +67,11 @@ export function RecordingDetailPage() {
   const [linkCopy, setLinkCopy] = useState<"idle" | "copied" | "failed">("idle");
   const shareButton = useRef<HTMLButtonElement>(null);
   const sharePanel = useRef<HTMLElement>(null);
+  // Task 1.38: fixed transcript lines and new notes from them
+  const [transcriptEdited, setTranscriptEdited] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenMode, setRegenMode] = useState<RecordingMode>("meeting");
+  const regenPanel = useRef<HTMLElement>(null);
 
   const { data, error } = useQuery({
     queryKey: key,
@@ -142,6 +153,29 @@ export function RecordingDetailPage() {
   useEffect(() => {
     if (sharing) sharePanel.current?.focus();
   }, [sharing]);
+
+  async function editLine(segmentId: string, text: string) {
+    await api(`/recordings/${id}/segments/${segmentId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    queryClient.setQueryData<Detail>(key, (d) => d && { ...d, segments: d.segments.map((s) => (s.id === segmentId ? { ...s, text } : s)) });
+    void queryClient.invalidateQueries({ queryKey: ["search"] });
+    setTranscriptEdited(true);
+  }
+  const regenerate = useMutation({
+    mutationFn: (mode: RecordingMode) =>
+      api(`/recordings/${id}/regenerate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }) }),
+    onSuccess: (_r, mode) => {
+      // the page shows the processing steps and polls until the new notes are there
+      queryClient.setQueryData<Detail>(key, (d) => d && { ...d, recording: { ...d.recording, mode, status: "summarizing", error: null } });
+      setRegenOpen(false);
+      setTranscriptEdited(false);
+      setTab("notes");
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: ["recordings"] });
+    },
+  });
+  useEffect(() => {
+    if (regenOpen) regenPanel.current?.focus();
+  }, [regenOpen]);
   function closeShare() {
     setSharing(false);
     setLinkCopy("idle");
@@ -196,6 +230,12 @@ export function RecordingDetailPage() {
     } catch {
       setLinkCopy("failed");
     }
+  }
+
+  function openRegen() {
+    setRegenMode(rec.mode);
+    regenerate.reset();
+    setRegenOpen(true);
   }
 
   const toggleDone = (i: number) =>
@@ -358,6 +398,28 @@ export function RecordingDetailPage() {
         </div>
       )}
 
+      {regenOpen && rec.status === "ready" && (
+        <section
+          id="regenerate-panel"
+          ref={regenPanel}
+          tabIndex={-1}
+          aria-labelledby="regenerate-title"
+          className={`${styles.confirm} ${styles.regenerate}`}
+          onKeyDown={(e) => { if (e.key === "Escape" && !regenerate.isPending) setRegenOpen(false); }}
+        >
+          <h2 id="regenerate-title" className={styles.confirmTitle}>Regenerate the notes?</h2>
+          <p className={styles.confirmText}>New notes are written from the transcript as it is now. Your edits to the notes are replaced; the current version stays in the history.</p>
+          <div className={styles.regenModes}>
+            <SegmentedControl legend="Write them as" name="regen-mode" options={MODE_OPTIONS} value={regenMode} onChange={setRegenMode} />
+          </div>
+          {regenerate.error && <p className={styles.error} role="alert">The notes could not be regenerated. Check your connection, then try again.</p>}
+          <div className={styles.confirmButtons}>
+            <Button onClick={() => regenerate.mutate(regenMode)} disabled={regenerate.isPending}>{regenerate.isPending ? "Starting…" : "Regenerate notes"}</Button>
+            <Button variant="secondary" onClick={() => setRegenOpen(false)} disabled={regenerate.isPending}>Keep these notes</Button>
+          </div>
+        </section>
+      )}
+
       {rec.status === "ready" && notes ? (
         <Tabs
           label="Recording content"
@@ -379,10 +441,22 @@ export function RecordingDetailPage() {
                 onCancel={() => { setEditing(false); setSaveError(null); }}
                 onToggleDone={toggleDone}
               />
+              {!editing && (
+                <div className={styles.regenRow}>
+                  <Button variant="secondary" size="small" aria-expanded={regenOpen} aria-controls="regenerate-panel" onClick={() => (regenOpen ? setRegenOpen(false) : openRegen())}>
+                    Regenerate notes
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <div className={styles.transcript} ref={transcriptBox}>
-              <Transcript segments={data.segments} lang={rec.language} currentMs={timeMs} onSeek={seek} />
+              {transcriptEdited && (
+                <p className={styles.regenHint} role="status">
+                  The transcript changed. <button type="button" className={styles.linkButton} onClick={openRegen}>Regenerate the notes</button> to update them.
+                </p>
+              )}
+              <Transcript segments={data.segments} lang={rec.language} currentMs={timeMs} onSeek={seek} onEdit={editLine} />
             </div>
           )}
         </Tabs>

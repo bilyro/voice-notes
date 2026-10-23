@@ -1,9 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { SavedNotes, type CreateRecordingInput, type SharedRecording } from "@vn/shared";
+import { SavedNotes, type CreateRecordingInput, type RecordingMode, type SharedRecording } from "@vn/shared";
 import { config } from "../../config.js";
 import { httpError } from "../../lib/http-error.js";
 import { keys, storage } from "../../storage/storage.service.js";
-import { type RecordingsRepository, toRecording } from "./recordings.repository.js";
+import { type RecordingRow, type RecordingsRepository, toRecording } from "./recordings.repository.js";
+
+const PROCESSING: RecordingRow["status"][] = ["uploaded", "transcribing", "summarizing"];
 
 /** The part of a BullMQ Queue the service uses, so tests can pass a fake. */
 export type JobQueue = {
@@ -87,6 +89,23 @@ export class RecordingsService {
       await trx.replaceActionItems(id, userId, content.actionItems);
       return version;
     });
+  }
+
+  /** Task 1.38: fix a misheard line. Search follows at once (the generated `tsv` column). */
+  async editSegment(userId: string, id: string, segmentId: string, text: string) {
+    await this.repo.getOwned(userId, id);
+    if (!(await this.repo.editSegment(id, segmentId, text))) throw httpError(404, "Line not found");
+  }
+
+  /** Task 1.38: new AI notes from the transcript as it is now, optionally as another mode. The old versions stay. */
+  async regenerate(userId: string, id: string, mode: RecordingMode) {
+    const rec = await this.repo.getOwned(userId, id);
+    if (PROCESSING.includes(rec.status)) throw httpError(409, "The recording is still being processed");
+    if ((await this.repo.countSegments(id)) === 0) throw httpError(409, "There is no transcript to make notes from");
+    const jobId = `notes-${id}`;
+    await (await this.queues.notes.getJob(jobId))?.remove();       // BullMQ ignores add() with a finished job's id
+    await this.repo.update(id, { mode, status: "summarizing", error: null });
+    await this.queues.notes.add("notes", { recordingId: id }, { jobId });
   }
 
   /** Runs the pipeline again from the step that failed: no transcript yet → transcribe, otherwise → notes. */

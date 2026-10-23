@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import type { CreateRecordingInput, Notes, Recording, Segment } from "@vn/shared";
+import type { CreateRecordingInput, Notes, Recording, Segment, TranscriptLine } from "@vn/shared";
 import { db } from "../../db.js";
 import { httpError } from "../../lib/http-error.js";
 
@@ -22,7 +22,7 @@ export type RecordingRow = {
   updated_at: Date;
 };
 
-type SegmentRow = { recording_id: string; start_ms: number; end_ms: number; speaker: string | null; text: string };
+type SegmentRow = { id: string; recording_id: string; start_ms: number; end_ms: number; speaker: string | null; text: string };
 type NotesRow = { recording_id: string; version: number; content: Notes; edited_by_user: boolean };
 
 /** Row → the API shape from @vn/shared (camelCase, no internal columns). */
@@ -81,12 +81,18 @@ export class RecordingsRepository {
       .update({ ...patch, updated_at: this.db.fn.now() as unknown as Date });
   }
 
-  async getSegments(recordingId: string): Promise<Segment[]> {
+  async getSegments(recordingId: string): Promise<TranscriptLine[]> {
     const rows = await this.db<SegmentRow>("transcript_segments")
       .where({ recording_id: recordingId })
       .orderBy("start_ms")
-      .select("start_ms", "end_ms", "speaker", "text");
-    return rows.map((s) => ({ startMs: s.start_ms, endMs: s.end_ms, speaker: s.speaker, text: s.text }));
+      .select("id", "start_ms", "end_ms", "speaker", "text");
+    return rows.map((s) => ({ id: String(s.id), startMs: s.start_ms, endMs: s.end_ms, speaker: s.speaker, text: s.text }));
+  }
+
+  /** Task 1.38: a person's fix to one line. Returns false when the line isn't in this recording. */
+  async editSegment(recordingId: string, segmentId: string, text: string) {
+    const n = await this.db<SegmentRow>("transcript_segments").where({ id: segmentId, recording_id: recordingId }).update({ text });
+    return n > 0;
   }
 
   /** Delete + insert in one transaction, so a retried transcribe job never leaves duplicates. */

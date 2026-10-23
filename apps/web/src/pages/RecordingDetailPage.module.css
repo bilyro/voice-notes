@@ -158,3 +158,31 @@
 .copyError {
   margin-top: var(--space-2);
 }
+
+/* Task 1.38: regenerate the notes (inline, like Delete and Share) */
+.regenerate {
+  margin-top: 28px;
+}
+.regenModes {
+  margin-top: var(--space-4);
+}
+.regenRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+.regenHint {
+  margin-bottom: var(--space-3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

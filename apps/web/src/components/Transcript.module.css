@@ -24,3 +24,57 @@
 .text {
   margin-top: 2px;
 }
+
+/* Task 1.38: a pencil at the end of each line; it shows on hover and keyboard focus, always on touch screens */
+.editable {
+  grid-template-columns: 52px minmax(0, 1fr) 32px;
+}
+.edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  opacity: 0;
+}
+.row:hover .edit,
+.edit:focus-visible {
+  opacity: 1;
+}
+.edit:hover {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+@media (hover: none) {
+  .edit { opacity: 1; }
+}
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  grid-column: 2 / -1;
+  cursor: auto;
+}
+.textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-bg);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.editButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+.error {
+  font-size: 14px;
+  color: var(--color-error);
+}

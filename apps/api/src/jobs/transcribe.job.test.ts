@@ -44,7 +44,7 @@ describe("transcribeJob", () => {
 
     const segments = await repo.getSegments(rec.id);
     expect(segments).toHaveLength(2);
-    expect(segments[1]).toEqual({ startMs: 4000, endMs: 9000, speaker: null, text: "Olena will prepare the quiz by Friday." });
+    expect(segments[1]).toEqual({ id: expect.any(String), startMs: 4000, endMs: 9000, speaker: null, text: "Olena will prepare the quiz by Friday." });   // the id: Task 1.38
 
     const after = await repo.getById(rec.id);
     expect(after).toMatchObject({ status: "transcribing", error: null, audio_key: keys.audio(rec.id) });

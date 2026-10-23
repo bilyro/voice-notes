@@ -1982,11 +1982,20 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **Commit:** `feat: names and terms hint for better transcripts`
 
 ### Task 1.38 — Edit the transcript and regenerate the notes
-- [ ] **Files:** `apps/api/src/modules/recordings/*` (edit a segment, regenerate), `apps/web/src/components/Transcript.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`
-- [ ] **Edit a line:** on the Transcript tab, each line gets an "Edit" (pencil) that turns it into a text field with Save and Cancel; `PATCH /api/recordings/:id/segments/:segmentId { text }`. Search picks it up at once (the generated `tsv` column).
-- [ ] **Regenerate notes:** a secondary "Regenerate notes" with an inline confirmation: pick the mode (meeting, lesson or memo) and read "Your edits to the notes are replaced. The current version stays in the history." `POST /api/recordings/:id/regenerate { mode }` sets `summarizing` and queues the notes job (a new AI version).
-- [ ] **Verify:** API tests (owner only, 404 for others, empty text refused, regenerate queues the job and changes the mode); browser: edit a misheard word → saved, found by search; regenerate as lesson → concepts and review questions appear; CI green.
-- [ ] **Commit:** `feat: edit transcript lines and regenerate notes`
+- [x] **Files:** `packages/shared/src/schemas/transcript.ts` + `recording.ts` (`TranscriptLine`, `SegmentEdit`, `RegenerateInput`), `apps/api/src/modules/recordings/*` (edit a segment, regenerate, tests), `apps/api/src/jobs/transcribe.job.test.ts`, `apps/web/src/components/Transcript.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx` (+ CSS module), `docs/DESIGN.md`
+- [x] **Edit a line:** on the Transcript tab, each line gets an "Edit" (pencil) that turns it into a text field with Save and Cancel; `PATCH /api/recordings/:id/segments/:segmentId { text }`. Search picks it up at once (the generated `tsv` column).
+- [x] **Regenerate notes:** a secondary "Regenerate notes" with an inline confirmation: pick the mode (meeting, lesson or memo) and read "Your edits to the notes are replaced. The current version stays in the history." `POST /api/recordings/:id/regenerate { mode }` sets `summarizing` and queues the notes job (a new AI version).
+- [x] **Verify:** API tests (owner only, 404 for others, empty text refused, regenerate queues the job and changes the mode); browser: edit a misheard word → saved, found by search; regenerate as lesson → concepts and review questions appear; CI green.
+- [x] **As built:**
+  - **Line ids:** the detail response's lines now carry their `id` (`TranscriptLine`). An edit is only accepted for a line of that recording (404 otherwise), and the generated `tsv` column makes it searchable at once.
+  - **Regenerate:** clears the old finished `notes-<id>` job first (BullMQ ignores `add()` with a used id, as in retry), sets the mode and `summarizing`, and queues the job. It's refused while the recording is processing or has no transcript (409). The page then shows the processing steps and polls, as for a new recording.
+  - **Placement:** "Regenerate notes" sits under the notes instead of in the actions row, which is full (Task 1.32). After an edit, the Transcript tab offers it in a sentence.
+  - **Pencils:** shown on hover and focus on desktop, always under `(hover: none)`.
+  - **Verified:**
+    - API tests, 4: ids, a trimmed edit found by search; empty, too long, another user's recording, a line of another recording and a bad id refused; regenerate sets the mode and status and replaces the job; 409 while processing or without a transcript; bad mode 400, others 404, signed out 401.
+    - Headless Chrome on a real recording, 13 checks: a labelled pencil on every line; edit opens with the text focused; Escape cancels; clicking in the editor doesn't move the audio; Save shows the fix and the regenerate sentence; saved and searchable; the panel takes focus with the current mode, Escape closes it; regenerating as a lesson shows "Writing notes", then the notes are a lesson (2 concepts, 5 review questions) written from the edited transcript ("sports hall") as a new AI version; phone (touch): pencils visible, no sideways scroll; no page errors.
+    - CI green.
+- [x] **Commit:** `feat: edit transcript lines and regenerate notes`
 
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.

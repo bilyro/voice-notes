@@ -29,6 +29,9 @@ export const Recording = z.object({
 });
 
 export type Recording = z.infer<typeof Recording>;
+
+/** `POST /api/recordings/:id/regenerate`: new notes from the (edited) transcript, optionally as another mode (Task 1.38) */
+export const RegenerateInput = z.object({ mode: RecordingMode });
 export type CreateRecordingInput = z.infer<typeof CreateRecordingInput>;
 export type RecordingMode = z.infer<typeof RecordingMode>;
 export type LanguageCode = z.infer<typeof LanguageCode>;

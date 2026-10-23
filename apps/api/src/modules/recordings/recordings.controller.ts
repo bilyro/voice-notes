@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { CreateRecordingInput, SavedNotes } from "@vn/shared";
+import { CreateRecordingInput, RegenerateInput, SavedNotes, SegmentEdit } from "@vn/shared";
 import { requireUser } from "../../plugins/require-user.js";
 import { RecordingsService } from "./recordings.service.js";
 
@@ -50,6 +50,21 @@ export async function recordingsController(app: FastifyInstance, service: Record
     const { id } = IdParams.parse(req.params);
     const version = await service.saveNotes(req.userId, id, SavedNotes.parse(req.body));
     return { version };
+  });
+
+  // Task 1.38: fix a transcript line; make new notes from the transcript
+  app.patch("/recordings/:id/segments/:segmentId", { preHandler: requireUser }, async (req) => {
+    const { id, segmentId } = z.object({ id: z.uuid(), segmentId: z.string().regex(/^\d{1,18}$/) }).parse(req.params);
+    const { text } = SegmentEdit.parse(req.body);
+    await service.editSegment(req.userId, id, segmentId, text);
+    return { ok: true };
+  });
+
+  app.post("/recordings/:id/regenerate", { preHandler: requireUser }, async (req) => {
+    const { id } = IdParams.parse(req.params);
+    const { mode } = RegenerateInput.parse(req.body);
+    await service.regenerate(req.userId, id, mode);
+    return { ok: true };
   });
 
   app.post("/recordings/:id/retry", { preHandler: requireUser }, async (req) => {
