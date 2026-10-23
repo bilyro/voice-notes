@@ -9,6 +9,7 @@ import { RecordingDetailPage } from "./pages/RecordingDetailPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ActionItemsPage } from "./pages/ActionItemsPage";
 import { SharedNotesPage } from "./pages/SharedNotesPage";
+import { AccountPage } from "./pages/AccountPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
           { path: "/record", element: <RecordPage /> },
           { path: "/recordings/:id", element: <RecordingDetailPage /> },
           { path: "/action-items", element: <ActionItemsPage /> },
+          { path: "/account", element: <AccountPage /> },
         ],
       },
     ],

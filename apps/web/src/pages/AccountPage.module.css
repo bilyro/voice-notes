@@ -1,0 +1,46 @@
+/* Your account (Task 1.36): one white card per section, the same form fields as sign-up */
+.card {
+  margin-top: var(--space-5);
+  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+}
+.heading {
+  font-size: 18px;
+}
+.text {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.status {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+/* inline confirmation (like deleting a recording): no modal */
+.confirm {
+  margin-top: var(--space-4);
+  padding: 16px var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-edge);
+}
+.confirmTitle {
+  margin-bottom: var(--space-3);
+  font-size: 16px;
+}

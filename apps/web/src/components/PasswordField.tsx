@@ -6,10 +6,13 @@ type Props = {
   /** sign up: shows "At least N characters" and ticks it when met */
   minLength?: number;
   maxLength?: number;
+  /** several on one page (the account page): each needs its own name and label */
+  name?: string;
+  label?: string;
 };
 
 /** Password input with a Show/Hide toggle; on sign up also the length hint. */
-export function PasswordField({ autoComplete, minLength, maxLength }: Props) {
+export function PasswordField({ autoComplete, minLength, maxLength, name = "password", label = "Password" }: Props) {
   const id = useId();
   const [shown, setShown] = useState(false);
   const [length, setLength] = useState(0);
@@ -17,12 +20,12 @@ export function PasswordField({ autoComplete, minLength, maxLength }: Props) {
 
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>Password</label>
+      <label htmlFor={id} className={styles.label}>{label}</label>
       <div className={styles.passwordWrap}>
         <input
           id={id}
           className={`${styles.input} ${styles.passwordInput}`}
-          name="password"
+          name={name}
           type={shown ? "text" : "password"}
           autoComplete={autoComplete}
           minLength={minLength}

@@ -1945,15 +1945,24 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.36 — Account page
 > Change your name and password, take your data with you, delete your account (GDPR basics, Phase 7).
-- [ ] **Files:** `apps/web/src/pages/AccountPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `apps/api/src/modules/account/*` (new: export, delete), `apps/api/src/server.ts`, `docs/DESIGN.md`
-- [ ] **Page `/account`** (the sidebar's account card opens it):
+- [x] **Files:** `apps/web/src/pages/AccountPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx` (+ CSS module), `apps/web/src/components/PasswordField.tsx` (`name`, `label`), `apps/api/src/modules/account/*` (new: export, delete, tests), `apps/api/src/server.ts`, `docs/DESIGN.md`
+- [x] **Page `/account`** (the sidebar's account card opens it):
   - **Name:** edit and save (`updateUser`).
   - **Password:** current + new + repeat (`changePassword` with `revokeOtherSessions: true`, the Task 1.35 rules).
   - **Your data:** "Download my data" gives one JSON file with your recordings, transcripts, notes (latest version), action items and the account's email and created date. The audio is listed by recording; each can be downloaded from its page.
   - **Delete account:** an inline confirmation where you type your email. Then all recordings are deleted (storage first, like Task 1.17), then the user, sessions and accounts; you land on the landing page.
-- [ ] **API:** `GET /api/account/export` (JSON, `Content-Disposition: attachment`), `DELETE /api/account` (needs `{ email }` matching the session's), both `requireUser`.
-- [ ] **Verify:** API tests: the export has only your data; delete removes recordings, storage objects, user, sessions; a wrong email → 400; another user unaffected. Browser: rename shows in the sidebar; changing the password signs other sessions out and the new one works; the download is valid JSON; deleting goes to the landing page, and signing in again fails; phone width; CI green.
-- [ ] **Commit:** `feat: account page with export and delete`
+- [x] **API:** `GET /api/account/export` (JSON, `Content-Disposition: attachment`), `DELETE /api/account` (needs `{ email }` matching the session's), both `requireUser`.
+- [x] **Verify:** API tests: the export has only your data; delete removes recordings, storage objects, user, sessions; a wrong email → 400; another user unaffected. Browser: rename shows in the sidebar; changing the password signs other sessions out and the new one works; the download is valid JSON; deleting goes to the landing page, and signing in again fails; phone width; CI green.
+- [x] **As built:**
+  - **Deleting** reuses `RecordingsService.delete` for each recording (storage first, then the row and its cascade), then removes Better Auth's `session`, `account` and `verification` rows and the `user` in one transaction. The typed email is compared trimmed and case-insensitively.
+  - **The export** is built from the database (latest notes version per recording, the transcript, `hasAudio`) and downloaded as a Blob.
+  - **Name and password** use Better Auth's own client calls (`updateUser`, `changePassword` with `revokeOtherSessions`). The name field shows the session's name until you type, so no state is set inside an effect.
+  - **Name rule:** words under 4 letters are ignored (Task 1.35), so "Zoe" may appear in a password but "Lane" may not.
+  - **Verified:**
+    - API tests, 4: the export has your account, recordings in order, transcript and latest notes and nothing of another user; another email → 400 and nothing deleted; delete removes recordings, action items, stored audio, user, sessions and sign-in rows; the old cookie → 401 and signing in again fails; the other user keeps everything; no session → 401.
+    - Headless Chrome, 17 checks: the sidebar opens it; rename → "Saved." and the initials follow; password: mismatch, wrong current and name-in-password messages, then a change signs out a second session but keeps this one, and only the new password works; the download is a valid JSON file with the account and recording; delete: focus, disabled until the email matches, Escape, then the landing page and no account left; phone width; no page errors.
+    - CI green.
+- [x] **Commit:** `feat: account page with export and delete`
 
 ### Task 1.37 — Names and terms hint
 > The speech-to-text accepts a short hint text, so names ("Olena", "Riverside School") and terms get spelled right.

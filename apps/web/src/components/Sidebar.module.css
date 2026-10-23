@@ -114,7 +114,19 @@
   color: var(--color-ink-muted);
 }
 
-/* account card at the bottom */
+/* account card at the bottom; the avatar + email open the account page */
+.accountLink {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.accountLink:hover .email {
+  text-decoration: underline;
+}
 .account {
   margin-top: auto;
   display: flex;

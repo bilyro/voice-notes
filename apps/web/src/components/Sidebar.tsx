@@ -85,8 +85,11 @@ export function Sidebar() {
       )}
 
       <div className={styles.account}>
-        <span className={styles.avatar} aria-hidden="true">{initials(session?.user.name, session?.user.email)}</span>
-        <span className={styles.email}>{session?.user.email}</span>
+        {/* the account page (Task 1.36) */}
+        <Link to="/account" className={styles.accountLink} title="Your account">
+          <span className={styles.avatar} aria-hidden="true">{initials(session?.user.name, session?.user.email)}</span>
+          <span className={styles.email}>{session?.user.email}</span>
+        </Link>
         <button type="button" className={styles.signOut} aria-label="Sign out" title="Sign out" onClick={signOut}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 4h4v16h-4" />
