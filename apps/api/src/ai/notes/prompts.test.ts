@@ -8,6 +8,12 @@ describe("systemPrompt", () => {
     expect(systemPrompt("memo", "es")).toContain("Write all notes in Spanish, the language of the recording.");
   });
 
+  it("adds the names and terms when given (Task 1.37)", () => {
+    expect(systemPrompt("meeting", "en", "Yarema Tkachuk, PTA")).toContain("Spell these names and terms exactly like this: Yarema Tkachuk, PTA");
+    expect(systemPrompt("meeting", "en")).not.toContain("Spell these names");
+    expect(systemPrompt("meeting", "en", "")).not.toContain("Spell these names");
+  });
+
   it("keeps the mode rule", () => {
     expect(systemPrompt("lesson", "uk")).toContain("reviewQuestions");
   });

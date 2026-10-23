@@ -1,5 +1,6 @@
 // map → reduce shared by all adapters
 import type { LanguageCode, Notes, RecordingMode, Segment } from "@vn/shared";
+import { systemPrompt } from "./prompts.js";
 import { formatTranscript, type NotesGenerator } from "./notes-generator.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -12,14 +13,16 @@ export abstract class ChunkedNotesGenerator implements NotesGenerator {
   abstract readonly name: string;
   protected abstract readonly maxCharsPerCall: number;
   protected abstract readonly pauseBetweenCallsMs: number;   // respects per-minute rate limits
-  protected abstract callModel(mode: RecordingMode, language: LanguageCode, content: string): Promise<Notes>;
+  /** `system` is the finished system prompt (mode, language, vocabulary) */
+  protected abstract callModel(system: string, content: string): Promise<Notes>;
 
-  async generate(segments: Segment[], mode: RecordingMode, language: LanguageCode): Promise<Notes> {
+  async generate(segments: Segment[], mode: RecordingMode, language: LanguageCode, vocabulary?: string | null): Promise<Notes> {
+    const system = systemPrompt(mode, language, vocabulary);
     // one call at a time, with a pause between calls, so we never burst over rate limits
     let calls = 0;
     const call = async (content: string) => {
       if (calls++ > 0) await sleep(this.pauseBetweenCallsMs);
-      return this.callModel(mode, language, content);
+      return this.callModel(system, content);
     };
 
     const text = formatTranscript(segments);

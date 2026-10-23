@@ -50,6 +50,14 @@ const SOUND_HINTS: Record<Sound, string> = {
   tab: "For a video or a call in another tab. The browser asks which tab: tick “Also share tab audio”.",
 };
 const SOUND_KEY = "vn.recording-sound";
+const VOCABULARY_KEY = "vn.recording-vocabulary";   // Task 1.37: names and terms, kept for the next recording
+function savedVocabulary() {
+  try {
+    return localStorage.getItem(VOCABULARY_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
 function savedSound(): Sound {
   try {
     return localStorage.getItem(SOUND_KEY) === "tab" ? "tab" : "mic";
@@ -76,6 +84,7 @@ export function RecordPage() {
   const [mode, setMode] = useState<RecordingMode>("meeting");
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<LanguageCode>(savedLanguage);
+  const [vocabulary, setVocabulary] = useState(savedVocabulary);
   const [tabSupported] = useState(canRecordTab);
   const [sound, setSound] = useState<Sound>(savedSound);
   const [liveWithTab, setLiveWithTab] = useState(false);
@@ -161,7 +170,7 @@ export function RecordPage() {
           const { id } = await api<{ id: string }>("/recordings", {
             method: "POST",
             headers: JSON_HEADERS,
-            body: JSON.stringify({ mode, title: title.trim() || undefined, language, mimeType: pickMimeType() || "audio/webm", source: "web" }),
+            body: JSON.stringify({ mode, title: title.trim() || undefined, language, vocabulary: vocabulary.trim() || undefined, mimeType: pickMimeType() || "audio/webm", source: "web" }),
           });
           idRef.current = id;
           uploaderRef.current = new ChunkUploader(id, setUpload);
@@ -205,7 +214,7 @@ export function RecordPage() {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
-          mode, language, source: "upload",
+          mode, language, source: "upload", vocabulary: vocabulary.trim() || undefined,
           title: title.trim() || titleFromFileName(chosen.name) || undefined,
           mimeType: chosen.type || "application/octet-stream",
         }),
@@ -318,6 +327,25 @@ export function RecordPage() {
             {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
           </select>
           <p id="language-hint" className={styles.hint}>The language people speak in the recording. The transcript and notes use it too.</p>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="vocabulary" className={styles.label}>
+            Names and terms <span className={styles.optional}>(optional)</span>
+          </label>
+          <input
+            id="vocabulary"
+            className={styles.input}
+            value={vocabulary}
+            maxLength={300}
+            placeholder="For example: Olena, Riverside School, PTA"
+            aria-describedby="vocabulary-hint"
+            onChange={(e) => {
+              setVocabulary(e.target.value);
+              try { localStorage.setItem(VOCABULARY_KEY, e.target.value); } catch { /* private window: just not remembered */ }
+            }}
+          />
+          <p id="vocabulary-hint" className={styles.hint}>Names, places or words that come up. They help the transcript and the notes spell them right.</p>
         </div>
 
         <div className={styles.field}>

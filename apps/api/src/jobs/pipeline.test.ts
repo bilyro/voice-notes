@@ -9,7 +9,7 @@ import type { JobQueue } from "../modules/recordings/recordings.service.js";
 import { connection, queues } from "../queue/queues.js";
 import { buildServer } from "../server.js";
 import { keys, storage } from "../storage/storage.service.js";
-import { stt } from "../ai/providers.js";
+import { notesGenerator, stt } from "../ai/providers.js";
 import { notesJob } from "./notes.job.js";
 import { transcribeJob } from "./transcribe.job.js";
 
@@ -111,6 +111,31 @@ describe("pipeline", () => {
     await notesJob(rec.id);
     expect(await repo.getById(rec.id)).toMatchObject({ status: "failed", error: "No speech detected" });
     expect(await repo.latestNotes(rec.id)).toBeUndefined();
+  });
+
+  it("passes the names hint to speech-to-text and the notes (Task 1.37)", async () => {
+    const cookie = await signUp();
+    const { id } = (
+      await app.inject({ method: "POST", url: "/api/recordings", headers: { cookie },
+        payload: { mode: "meeting", mimeType: "audio/webm;codecs=opus", source: "web", vocabulary: "  Yarema Tkachuk, PTA  " } })
+    ).json<{ id: string }>();
+    ids.push(id);
+    expect((await repo.getById(id))!.vocabulary).toBe("Yarema Tkachuk, PTA");
+    const chunks = toneChunks();
+    for (const [index, chunk] of chunks.entries()) {
+      await app.inject({ method: "PUT", url: `/api/recordings/${id}/chunks/${index}`, headers: { cookie, "content-type": "audio/webm;codecs=opus" }, payload: chunk });
+    }
+    await app.inject({ method: "POST", url: `/api/recordings/${id}/finish`, headers: { cookie }, payload: { chunkCount: chunks.length, durationMs: 3000 } });
+    const sttSpy = vi.spyOn(stt, "transcribe");
+    const notesSpy = vi.spyOn(notesGenerator, "generate");
+    await transcribeJob(id);
+    await notesJob(id);
+    expect(sttSpy.mock.calls.at(-1)![1]).toMatchObject({ language: "en", prompt: "Yarema Tkachuk, PTA" });
+    expect(notesSpy.mock.calls.at(-1)!.slice(1)).toEqual(["meeting", "en", "Yarema Tkachuk, PTA"]);
+
+    const tooLong = await app.inject({ method: "POST", url: "/api/recordings", headers: { cookie },
+      payload: { mode: "meeting", mimeType: "audio/webm", source: "web", vocabulary: "x".repeat(301) } });
+    expect(tooLong.statusCode).toBe(400);
   });
 
   it("treats a transcript of only 'Thank you.' as silence: no transcript, no notes (Task 1.31)", async () => {

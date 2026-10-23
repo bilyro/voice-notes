@@ -18,10 +18,14 @@ const PHRASES = [
 const normalize = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const SILENCE = new Set(PHRASES.map(normalize));
 
-/** True when nothing was said: every segment is empty or one of the phrases above. A real sentence is never matched. */
-export function onlySilencePhrases(segments: Segment[]) {
+/**
+ * True when nothing was said: every segment is empty, one of the phrases above, or just repeats the spelling hint
+ * (Whisper echoes its prompt when it hears silence, Task 1.37). A real sentence is never matched.
+ */
+export function onlySilencePhrases(segments: Segment[], prompt = "") {
+  const hint = normalize(prompt);
   return segments.every((s) => {
     const t = normalize(s.text);
-    return t === "" || SILENCE.has(t);
+    return t === "" || SILENCE.has(t) || (hint !== "" && hint.includes(t));
   });
 }

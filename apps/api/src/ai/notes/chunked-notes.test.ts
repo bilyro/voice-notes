@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { LanguageCode, Notes, RecordingMode, Segment } from "@vn/shared";
+import type { Notes, Segment } from "@vn/shared";
 import { batchForMerge, ChunkedNotesGenerator, splitByChars } from "./chunked-notes.js";
 
 const notes = (summary: string): Notes => ({
@@ -61,7 +61,7 @@ class TestNotes extends ChunkedNotesGenerator {
   protected readonly pauseBetweenCallsMs = 0;
   calls: string[] = [];
 
-  protected async callModel(_mode: RecordingMode, _language: LanguageCode, content: string): Promise<Notes> {
+  protected async callModel(_system: string, content: string): Promise<Notes> {
     this.calls.push(content);
     if (content.startsWith("Merge these partial notes")) {
       const batch = JSON.parse(content.slice(content.indexOf("["))) as Notes[];

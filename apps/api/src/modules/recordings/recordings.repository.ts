@@ -17,6 +17,7 @@ export type RecordingRow = {
   audio_key: string | null;
   error: string | null;
   share_token: string | null;                 // Task 1.30: the read-only link, or null
+  vocabulary: string | null;                  // Task 1.37: names and terms, a spelling hint
   created_at: Date;
   updated_at: Date;
 };
@@ -47,6 +48,7 @@ export class RecordingsRepository {
         language: input.language,
         source: input.source,
         mime_type: input.mimeType,
+        vocabulary: input.vocabulary || null,
         ...(input.title ? { title: input.title } : {}),
       })
       .returning("*");

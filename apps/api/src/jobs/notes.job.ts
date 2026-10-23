@@ -11,7 +11,7 @@ export async function notesJob(recordingId: string) {
     return repo.update(recordingId, { status: "failed", error: "No speech detected" });
   }
 
-  const notes = await notesGenerator.generate(segments, rec.mode, rec.language);
+  const notes = await notesGenerator.generate(segments, rec.mode, rec.language, rec.vocabulary);
 
   await repo.transaction(async (trx) => {
     await trx.insertNotes(recordingId, notes);                       // version = last + 1

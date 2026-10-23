@@ -12,6 +12,8 @@ export const CreateRecordingInput = z.object({
   mode: RecordingMode,
   language: LanguageCode.default("en"),
   mimeType: z.string(),                     // e.g. "audio/webm;codecs=opus"
+  // names and terms said in it, a spelling hint for the transcript and the notes (Task 1.37)
+  vocabulary: z.string().trim().max(300).optional(),
   source: z.enum(["web", "desktop", "mobile", "upload"]),   // "upload": an existing file (Task 1.27)
 });
 

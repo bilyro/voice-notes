@@ -13,9 +13,10 @@ export async function transcribeJob(recordingId: string) {
 
   const { localPath, dir } = await prepareAudio(recordingId, rec.chunk_count);
   try {
-    const { segments } = await stt.transcribe(localPath, { language: rec.language, diarize: false });
-    // only "Thank you." and the like means silence: no transcript, so the notes job reports "No speech detected"
-    await repo.replaceSegments(recordingId, onlySilencePhrases(segments) ? [] : segments);   // delete + insert in one transaction
+    const prompt = rec.vocabulary ?? undefined;
+    const { segments } = await stt.transcribe(localPath, { language: rec.language, diarize: false, prompt });
+    // only "Thank you." and the like (or the hint echoed back) means silence: no transcript, so the notes job reports "No speech detected"
+    await repo.replaceSegments(recordingId, onlySilencePhrases(segments, prompt) ? [] : segments);   // delete + insert in one transaction
     await repo.update(recordingId, { audio_key: keys.audio(recordingId) });
   } finally {
     await rm(dir, { recursive: true, force: true });

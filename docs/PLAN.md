@@ -1966,11 +1966,20 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.37 — Names and terms hint
 > The speech-to-text accepts a short hint text, so names ("Olena", "Riverside School") and terms get spelled right.
-- [ ] **Files:** `apps/api/migrations/005_vocabulary.ts` (new), `packages/shared/src/schemas/recording.ts`, `apps/api/src/ai/stt/*` (pass `prompt`), `apps/api/src/ai/notes/prompts.ts`, `apps/api/src/jobs/*`, `apps/web/src/pages/RecordPage.tsx`, `docs/DESIGN.md`
-- [ ] **Record page:** an optional "Names and terms" field ("Olena, Andrii, Riverside School, PTA"), up to 300 characters, remembered in this browser. Saved on the recording (`recordings.vocabulary`).
-- [ ] **Pipeline:** Whisper gets it as `prompt` (OpenAI-compatible; Groq and OpenAI both accept it). The notes prompt adds "Spell these names and terms like this: …".
-- [ ] **Verify:** a recording with an unusual name, transcribed with and without the hint, gets the spelling right with it; the field is optional and remembered; CI green.
-- [ ] **Commit:** `feat: names and terms hint for better transcripts`
+- [x] **Files:** `apps/api/migrations/005_vocabulary.ts` (new), `packages/shared/src/schemas/recording.ts`, `apps/api/src/ai/stt/*` (pass `prompt`), `apps/api/src/ai/notes/prompts.ts`, `apps/api/src/ai/notes/*` (adapters get the finished system prompt), `apps/api/src/ai/stt/silence-phrases.ts`, `apps/api/src/jobs/*` (+ tests), `apps/api/src/modules/recordings/recordings.repository.ts`, `apps/web/src/pages/RecordPage.tsx`, `docs/DESIGN.md`
+- [x] **Record page:** an optional "Names and terms" field ("Olena, Andrii, Riverside School, PTA"), up to 300 characters, remembered in this browser. Saved on the recording (`recordings.vocabulary`).
+- [x] **Pipeline:** Whisper gets it as `prompt` (OpenAI-compatible; Groq and OpenAI both accept it). The notes prompt adds "Spell these names and terms like this: …".
+- [x] **Verify:** a recording with an unusual name, transcribed with and without the hint, gets the spelling right with it; the field is optional and remembered; CI green.
+- [x] **As built:**
+  - **Measured before building:** the same 16 s of speech with five Ukrainian names (macOS voice) on Groq's Whisper got 0 of 4 checked names right without the hint ("Yarema Kachuk", "Ksen Yavavchuk", "Ostaphnadishan", "Mirichka Dshas") and 4 of 4 with it.
+  - **Notes adapters:** they now receive the finished system prompt (`callModel(system, content)`) instead of mode + language, so adding the vocabulary line didn't need another parameter in every adapter.
+  - **Prompt echo:** Whisper can echo its prompt when it hears silence, so a transcript that only repeats the hint now counts as silence too (the Task 1.31 filter, `onlySilencePhrases(segments, prompt)`).
+  - **Saving:** the field is trimmed by the schema and stored as `null` when empty.
+  - **Verified:**
+    - Unit tests (the prompt line; echoed hint → silence; a real sentence with the names kept) and a pipeline test (the hint, trimmed, reaches speech-to-text as `prompt` and the notes generator; 301 characters → 400).
+    - Headless Chrome, 8 checks, recording through the Record page with the speech as microphone: field position, label, limit and hint; without the hint 0/4 names right, with it 4/4; the notes spell them right too (and even fixed the transcript's "Marechka" to "Marichka"); saved on the recording (null without); remembered; an uploaded file gets it too; no page errors.
+    - Migration rollback and re-apply; CI green.
+- [x] **Commit:** `feat: names and terms hint for better transcripts`
 
 ### Task 1.38 — Edit the transcript and regenerate the notes
 - [ ] **Files:** `apps/api/src/modules/recordings/*` (edit a segment, regenerate), `apps/web/src/components/Transcript.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`

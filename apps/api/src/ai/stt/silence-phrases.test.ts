@@ -13,6 +13,14 @@ describe("onlySilencePhrases", () => {
     expect(onlySilencePhrases([])).toBe(true);
   });
 
+  it("treats a transcript that only repeats the spelling hint as silence (Task 1.37)", () => {
+    const hint = "Yarema Tkachuk, Ksenia Vovchuk, Lysenko hall";
+    expect(onlySilencePhrases(seg("Yarema Tkachuk, Ksenia Vovchuk, Lysenko hall."), hint)).toBe(true);
+    expect(onlySilencePhrases(seg("Ksenia Vovchuk"), hint)).toBe(true);
+    expect(onlySilencePhrases(seg("Yarema Tkachuk will meet Ksenia on Monday."), hint)).toBe(false);
+    expect(onlySilencePhrases(seg("Yarema Tkachuk"), "")).toBe(false);
+  });
+
   it("keeps anything that was really said", () => {
     expect(onlySilencePhrases(seg("Thank you for coming, let's start with the budget."))).toBe(false);
     expect(onlySilencePhrases(seg("Thank you.", "Dana will book the gym by Friday."))).toBe(false);

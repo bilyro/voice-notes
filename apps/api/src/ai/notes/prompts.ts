@@ -16,4 +16,6 @@ const modeRules: Record<RecordingMode, string> = {
   memo:    "This is a personal voice memo. Fill ideas and turn intentions into actionItems with owner = null.",
 };
 
-export const systemPrompt = (mode: RecordingMode, language: LanguageCode) => `${base(language)}\n\n${modeRules[mode]}`;
+/** `vocabulary`: names and terms as they should be spelled (Task 1.37). */
+export const systemPrompt = (mode: RecordingMode, language: LanguageCode, vocabulary?: string | null) =>
+  `${base(language)}${vocabulary ? `\n- Spell these names and terms exactly like this: ${vocabulary}` : ""}\n\n${modeRules[mode]}`;

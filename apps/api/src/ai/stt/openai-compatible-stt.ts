@@ -17,6 +17,7 @@ export class OpenAiCompatibleStt implements SpeechToText {
       response_format: "verbose_json",         // segment timestamps, needed for click-to-seek
       timestamp_granularities: ["segment"],
       language: opts.language,                 // forcing the language beats auto-detect on accuracy
+      ...(opts.prompt ? { prompt: opts.prompt } : {}),   // spelling hint: names and terms (Task 1.37)
     });
     const segments = (res.segments ?? []).map((s) => ({
       startMs: Math.round(s.start * 1000),
