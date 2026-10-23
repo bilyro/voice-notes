@@ -1860,6 +1860,32 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
     - Migration rollback and re-apply; CI green (50 API tests).
 - [x] **Commit:** `feat: share notes with a read-only link`
 
+### Task 1.31 — Record sound played on this computer; no notes from silence
+> Reported on 2026-10-23: a video playing on the computer while recording gave a 14 s file that was almost silent (−60 to −80 dB). The transcript was "Thank you." and the notes said "The speaker expressed gratitude." Cause: the microphone was opened with `echoCancellation` and `noiseSuppression` on. Both are made for calls: echo cancellation removes what the computer itself plays, and noise suppression removes non-speech sound. Whisper then invented "Thank you." for the near-silence (Groq's `no_speech_prob` was 0 even for pure digital silence, so it can't be used to catch this).
+- [x] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/pages/RecordPage.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`, `apps/api/src/ai/stt/silence-phrases.ts` (+ test, new), `apps/api/src/jobs/transcribe.job.ts` (+ pipeline test), `docs/DESIGN.md`
+- [x] **Microphone:** both the level preview and the recording open it with `echoCancellation: false, noiseSuppression: false` (`autoGainControl` stays on for quiet voices). A recorder has no far end to protect from echo, so it should hear everything in the room, speakers included.
+- [x] **Record page hint** under the microphone: "Recording a video or a call on this computer? Play it through the speakers: headphones keep the sound away from the microphone." (Capturing the computer's sound directly is the desktop app, Phase 3.)
+- [x] **Silence phrases:** if every segment of a transcript is only one of the phrases Whisper invents for silence ("Thank you.", "Thanks for watching!", "Дякую.", "Gracias.", …), the transcript is treated as empty. The notes job then marks the recording failed with "No speech detected", so it never gets made-up notes.
+- [x] **Detail page:** for "No speech found in the audio" a hint says what to check (the input level; speakers instead of headphones for sound from this computer).
+- [x] **Verify:** unit tests for the phrase filter (whole-transcript only; a real sentence that contains "thank you" is kept; English, Ukrainian and Spanish); the reported 14 s file uploaded again → "No speech found" with the hint, no notes; a real speech file still gets notes; in Chrome, the preview and the recording stream both report `echoCancellation: false` and `noiseSuppression: false`; CI green. The real-speaker case needs a check on your computer (play a video while recording).
+- [x] **As built:**
+  - **Microphone settings:** `MIC_PROCESSING` lives in `use-recorder.ts` and is used by both `getUserMedia` calls (the level preview used to open the microphone with the browser's defaults, which have echo cancellation on).
+  - **Measured first:** the reported file was mostly −60 to −80 dB with three short bursts, and Whisper turned it into one 0–14 s segment "Thank you.". 30 s of pure digital silence also came back as "Thank you." with `no_speech_prob = 0`, which is why the filter uses phrases.
+  - **The filter:** `onlySilencePhrases` matches only when the **whole** transcript is silence phrases. Case and punctuation are ignored, and a real sentence like "Thank you for coming…" is kept. The transcribe job then saves an empty transcript, so the existing "No speech detected" path takes over.
+  - **Verified:**
+    - Unit tests (EN/UK/ES, real sentences kept) and a pipeline test ("Thank you." → failed, no segments, no notes).
+    - Through the real pipeline: a copy of the reported file → "No speech detected", no transcript, no notes; a real speech file still gets notes.
+    - In Chrome: the preview and the recording both ask for and get `echoCancellation: false`, `noiseSuppression: false`, `autoGainControl: true`. The detail page shows "No speech found" with the hint. No page errors. CI green.
+  - **Not verifiable here:** real speakers into a real microphone. That needs a check on your computer.
+- [x] **Commit:** `fix: record sound from the computer's speakers and don't make notes from silence`
+
+### Task 1.32 — Delete stays on the first row
+> With Share added (Task 1.30) the actions row needs 742 px but has 680 px, so "Delete" wrapped onto its own line, pushed right ("it jumped").
+- [ ] **Files:** `apps/web/src/pages/RecordingDetailPage.tsx` (+ CSS module), `docs/DESIGN.md`
+- [ ] **Layout:** the everyday buttons (Copy as Markdown, Download .md, Edit notes, Share) sit in their own group that wraps on its own. Delete becomes a 44 px icon button (trash icon, `aria-label="Delete"`, tooltip "Delete recording") that always stays at the right end of the first line. Same inline confirmation as before.
+- [ ] **Verify:** at 1440, 1280, 1100, 1024, 900 and 375 px wide, Delete is on the first line and the right-most; when the group wraps, only its own buttons move; keyboard (Tab, Enter, Escape) and the confirmation work as before; the Task 1.30 and regression suites pass; CI green.
+- [ ] **Commit:** `fix(web): keep Delete on the first row of the actions`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.

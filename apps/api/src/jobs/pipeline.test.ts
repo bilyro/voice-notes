@@ -9,6 +9,7 @@ import type { JobQueue } from "../modules/recordings/recordings.service.js";
 import { connection, queues } from "../queue/queues.js";
 import { buildServer } from "../server.js";
 import { keys, storage } from "../storage/storage.service.js";
+import { stt } from "../ai/providers.js";
 import { notesJob } from "./notes.job.js";
 import { transcribeJob } from "./transcribe.job.js";
 
@@ -110,5 +111,28 @@ describe("pipeline", () => {
     await notesJob(rec.id);
     expect(await repo.getById(rec.id)).toMatchObject({ status: "failed", error: "No speech detected" });
     expect(await repo.latestNotes(rec.id)).toBeUndefined();
+  });
+
+  it("treats a transcript of only 'Thank you.' as silence: no transcript, no notes (Task 1.31)", async () => {
+    const cookie = await signUp();
+    const { id } = (
+      await app.inject({ method: "POST", url: "/api/recordings", headers: { cookie },
+        payload: { mode: "meeting", mimeType: "audio/webm;codecs=opus", source: "web" } })
+    ).json<{ id: string }>();
+    ids.push(id);
+    const chunks = toneChunks();
+    for (const [index, chunk] of chunks.entries()) {
+      await app.inject({ method: "PUT", url: `/api/recordings/${id}/chunks/${index}`, headers: { cookie, "content-type": "audio/webm;codecs=opus" }, payload: chunk });
+    }
+    await app.inject({ method: "POST", url: `/api/recordings/${id}/finish`, headers: { cookie }, payload: { chunkCount: chunks.length, durationMs: 3000 } });
+    // what Whisper says for a near-silent file
+    vi.spyOn(stt, "transcribe").mockResolvedValueOnce({ segments: [{ startMs: 0, endMs: 3000, speaker: null, text: "Thank you." }] });
+
+    await transcribeJob(id);
+    await notesJob(id);
+
+    expect(await repo.getById(id)).toMatchObject({ status: "failed", error: "No speech detected" });
+    expect(await repo.getSegments(id)).toEqual([]);
+    expect(await repo.latestNotes(id)).toBeUndefined();
   });
 });

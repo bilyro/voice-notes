@@ -11,7 +11,7 @@ import { formatDuration } from "../lib/format";
 import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
 import { checkAudioFile, sliceFile, titleFromFileName, UPLOAD_ACCEPT } from "../recorder/file-upload";
 import { useAudioLevel } from "../recorder/use-audio-level";
-import { CHUNK_MS, pickMimeType, useRecorder } from "../recorder/use-recorder";
+import { CHUNK_MS, MIC_PROCESSING, pickMimeType, useRecorder } from "../recorder/use-recorder";
 import page from "./Page.module.css";
 import styles from "./RecordPage.module.css";
 
@@ -82,7 +82,7 @@ export function RecordPage() {
     let stream: MediaStream | null = null;
     let cancelled = false;
     navigator.mediaDevices
-      .getUserMedia({ audio: deviceId ? { deviceId: { exact: deviceId } } : true })
+      .getUserMedia({ audio: { ...(deviceId ? { deviceId: { exact: deviceId } } : {}), ...MIC_PROCESSING } })
       .then(async (s) => {
         if (cancelled) return s.getTracks().forEach((t) => t.stop());
         stream = s;
@@ -307,6 +307,7 @@ export function RecordPage() {
               <span className={styles.levelLabel}>{levelLabel(peak)}</span>
             </div>
           )}
+          <p className={styles.hint}>Recording a video or a call on this computer? Play it through the speakers: headphones keep the sound away from the microphone.</p>
         </div>
 
         <div className={styles.start}>

@@ -2,6 +2,13 @@ import { useCallback, useRef, useState } from "react";
 
 export const CHUNK_MS = 10_000;
 
+/**
+ * How the microphone is opened, for the level preview and the recording alike. Echo cancellation and noise
+ * suppression are made for calls: they remove what this computer plays (a video, the other people in a call) and any
+ * sound that isn't speech. A recorder should hear the whole room, speakers included (Task 1.31).
+ */
+export const MIC_PROCESSING = { echoCancellation: false, noiseSuppression: false, autoGainControl: true } as const;
+
 export function pickMimeType() {
   for (const t of ["audio/webm;codecs=opus", "audio/mp4"]) if (MediaRecorder.isTypeSupported(t)) return t;
   return "";
@@ -19,7 +26,7 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
   /** `deviceId` picks the microphone; omitted = the browser's default. */
   async function start(deviceId?: string) {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: deviceId ? { exact: deviceId } : undefined, echoCancellation: true, noiseSuppression: true },
+      audio: { deviceId: deviceId ? { exact: deviceId } : undefined, ...MIC_PROCESSING },
     });
     const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), audioBitsPerSecond: 32_000 });
     indexRef.current = 0;

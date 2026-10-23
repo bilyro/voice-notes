@@ -1,6 +1,7 @@
 import { rm } from "node:fs/promises";
 import { prepareAudio } from "../audio/prepare-audio.js";
 import { stt } from "../ai/providers.js";
+import { onlySilencePhrases } from "../ai/stt/silence-phrases.js";
 import { repo } from "../modules/recordings/recordings.repository.js";
 import { queues } from "../queue/queues.js";
 import { keys } from "../storage/storage.service.js";
@@ -13,7 +14,8 @@ export async function transcribeJob(recordingId: string) {
   const { localPath, dir } = await prepareAudio(recordingId, rec.chunk_count);
   try {
     const { segments } = await stt.transcribe(localPath, { language: rec.language, diarize: false });
-    await repo.replaceSegments(recordingId, segments);       // delete + insert in one transaction
+    // only "Thank you." and the like means silence: no transcript, so the notes job reports "No speech detected"
+    await repo.replaceSegments(recordingId, onlySilencePhrases(segments) ? [] : segments);   // delete + insert in one transaction
     await repo.update(recordingId, { audio_key: keys.audio(recordingId) });
   } finally {
     await rm(dir, { recursive: true, force: true });

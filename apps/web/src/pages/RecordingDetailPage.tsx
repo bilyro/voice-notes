@@ -334,6 +334,12 @@ export function RecordingDetailPage() {
           <Button variant="secondary" size="small" onClick={() => retry.mutate()} disabled={retry.isPending}>Try again</Button>
         </div>
       )}
+      {rec.status === "failed" && rec.error === "No speech detected" && (
+        <p className={`muted ${styles.wait}`}>
+          Nothing was heard in this recording. Next time, check that the input level moves before you start. For a video or a call
+          on this computer, play it through the speakers, not headphones.
+        </p>
+      )}
       {rec.status === "recording" && <p className={`muted ${styles.wait}`}>This recording was not finished, so there is nothing to process.</p>}
 
       {hasAudio && audio.data && (
