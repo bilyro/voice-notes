@@ -8,8 +8,9 @@ import { AuthLayout } from "./AuthLayout";
 import styles from "./Auth.module.css";
 
 /** Better Auth error code → what to tell the user; anything else falls back to the server's message. */
-function signInError(error: { code?: string; message?: string }) {
+function signInError(error: { code?: string; status?: number; message?: string }) {
   if (error.code === "INVALID_EMAIL_OR_PASSWORD") return "That email and password don’t match an account. Check them, or create an account.";
+  if (error.status === 429) return "Too many tries. Wait 10 seconds, then try again.";   // the sign-in rate limit (production)
   return error.message ?? "Signing in failed. Check your connection, then try again.";
 }
 

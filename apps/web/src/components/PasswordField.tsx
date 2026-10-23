@@ -5,10 +5,11 @@ type Props = {
   autoComplete: "current-password" | "new-password";
   /** sign up: shows "At least N characters" and ticks it when met */
   minLength?: number;
+  maxLength?: number;
 };
 
 /** Password input with a Show/Hide toggle; on sign up also the length hint. */
-export function PasswordField({ autoComplete, minLength }: Props) {
+export function PasswordField({ autoComplete, minLength, maxLength }: Props) {
   const id = useId();
   const [shown, setShown] = useState(false);
   const [length, setLength] = useState(0);
@@ -25,6 +26,7 @@ export function PasswordField({ autoComplete, minLength }: Props) {
           type={shown ? "text" : "password"}
           autoComplete={autoComplete}
           minLength={minLength}
+          maxLength={maxLength}
           required
           aria-describedby={minLength ? `${id}-hint` : undefined}
           onChange={(e) => setLength(e.target.value.length)}

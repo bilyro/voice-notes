@@ -1925,14 +1925,23 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.35 — Stronger password rules
 > Today: at least 8 characters, nothing else. New rules, following current NIST advice (SP 800-63B: length and breach checks, no forced symbols or rotation).
-- [ ] **Files:** `apps/api/src/auth.ts`, `apps/api/src/config.ts`, `apps/api/package.json` (test script), API tests, `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/components/PasswordField.tsx`, `.env.example`
-- [ ] **Length:** at least **12** characters, at most 128 (`minPasswordLength` / `maxPasswordLength`).
-- [ ] **Breached passwords:** Better Auth's `haveIBeenPwned` plugin (part of better-auth, no new dependency) refuses passwords found in known data breaches, on sign-up and password change. It only sends the first 5 characters of the password's SHA-1 hash to api.pwnedpasswords.com (k-anonymity), never the password. Setting `PASSWORD_BREACH_CHECK` (default `true`); the API tests switch it off so they don't need the internet.
-- [ ] **Not your name or email:** a password containing your email's name part or your name (4+ letters, any case) is refused (a Better Auth `before` hook on sign-up and change-password).
-- [ ] **Sign-in attempts:** Better Auth's rate limit, which is on in production by default, stays on. Its sign-in rule (a few attempts per 10 s per IP) is documented in the README.
-- [ ] **Web:** the hint "At least 12 characters" with the tick; messages: too short → "The password needs at least 12 characters."; breached → "This password appeared in a data breach. Choose a different one."; contains name/email → "Don't use your name or email in the password." Existing accounts keep their password (the rules apply when a password is set).
-- [ ] **Verify:** API tests: 11 characters → refused, 12 → accepted, containing the email name → refused, a breached password refused with the check on (fetch mocked); browser: the three messages and a strong password signs up; old accounts still sign in; CI green.
-- [ ] **Commit:** `feat(auth): stronger password rules`
+- [x] **Files:** `apps/api/src/auth.ts`, `apps/api/src/config.ts`, `apps/api/package.json` (test script), `apps/api/src/auth.test.ts` + `auth-breach.test.ts` (new), `apps/api/Dockerfile` (`NODE_ENV`), `apps/web/src/lib/password-errors.ts` (new), `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/pages/LoginPage.tsx`, `apps/web/src/components/PasswordField.tsx`, `.env.example`, `README.md`
+- [x] **Length:** at least **12** characters, at most 128 (`minPasswordLength` / `maxPasswordLength`).
+- [x] **Breached passwords:** Better Auth's `haveIBeenPwned` plugin (part of better-auth, no new dependency) refuses passwords found in known data breaches, on sign-up and password change. It only sends the first 5 characters of the password's SHA-1 hash to api.pwnedpasswords.com (k-anonymity), never the password. Setting `PASSWORD_BREACH_CHECK` (default `true`); the API tests switch it off so they don't need the internet.
+- [x] **Not your name or email:** a password containing your email's name part or your name (4+ letters, any case) is refused (a Better Auth `before` hook on sign-up and change-password).
+- [x] **Sign-in attempts:** Better Auth's rate limit, which is on in production by default, stays on. Its sign-in rule (a few attempts per 10 s per IP) is documented in the README.
+- [x] **Web:** the hint "At least 12 characters" with the tick; messages: too short → "The password needs at least 12 characters."; breached → "This password appeared in a data breach. Choose a different one."; contains name/email → "Don't use your name or email in the password." Existing accounts keep their password (the rules apply when a password is set).
+- [x] **Verify:** API tests: 11 characters → refused, 12 → accepted, containing the email name → refused, a breached password refused with the check on (fetch mocked); browser: the three messages and a strong password signs up; old accounts still sign in; CI green.
+- [x] **As built:**
+  - **Found and fixed: no rate limit in production.** Better Auth turns its rate limit on only when `NODE_ENV=production`, and the API image never set it, so a deployed server had no sign-in limit. The Dockerfile now sets `ENV NODE_ENV=production` after the build step. Checked by starting the API in production mode: wrong sign-ins 1–3 → 401, the 4th and 5th → 429. The dev server stays unlimited. Both pages say "Too many tries. Wait 10 seconds, then try again." on a 429.
+  - **Breach check:** the `haveIBeenPwned` plugin fails closed: if api.pwnedpasswords.com can't be reached, setting a password is refused with "The password couldn't be checked right now…". `password1234`, used by the old test accounts, is in the breach list 443,397 times. The browser suites now use a password that isn't.
+  - **Personal info:** checked in a Better Auth `before` hook on `/sign-up/email` and `/change-password`, using the session's user for the change.
+  - **Messages:** live in `lib/password-errors.ts`, so the account page (Task 1.36) uses the same wording.
+  - **Verified:**
+    - API tests, 7: 11 characters → `PASSWORD_TOO_SHORT`, 12 accepted, 129 → `PASSWORD_TOO_LONG`; the email's name part or a name word → `PASSWORD_CONTAINS_PERSONAL_INFO`, also on change-password; with the check on and the range API faked, a breached password is refused, only the 5-character hash prefix is sent, an unlisted one is accepted, and an unreachable service → 500.
+    - Browser, 7 checks against the real breach service: the hint ticks at 12; the breached and name messages; a strong password creates the account; an account made before the new rules still signs in.
+    - The regression (36) and languages (23) suites; CI green (60 API tests).
+- [x] **Commit:** `feat(auth): stronger password rules`
 
 ### Task 1.36 — Account page
 > Change your name and password, take your data with you, delete your account (GDPR basics, Phase 7).

@@ -115,6 +115,11 @@ GitHub Actions runs `pnpm turbo lint typecheck test` on every push and pull requ
 
 The API tests put their jobs under their own Redis prefix (`QUEUE_PREFIX=test` in the `test` script), so they can run while the dev worker is running.
 
+## Accounts and passwords
+
+- Passwords need **12–128 characters**, can't contain your name or your email's name part, and are refused if they appear in a known data breach (Have I Been Pwned: only the first 5 characters of the password's SHA-1 hash are sent; `PASSWORD_BREACH_CHECK=false` turns it off). If that service can't be reached, setting a password fails until it can. Existing accounts keep their passwords; the rules apply whenever a password is set.
+- Sign-in, sign-up and password changes are rate-limited to **3 tries per 10 seconds per IP** (Better Auth's default). It is on only with `NODE_ENV=production`, which the API image sets; `pnpm dev` has no limit.
+
 ## Phase 1 acceptance test
 
 Run this checklist again before each release. Use test recordings of your own voice: the free stack has no privacy guarantee.

@@ -25,6 +25,8 @@ const Env = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   NOTES_MODEL: z.string().default("claude-haiku-4-5"),
   MONTHLY_MINUTES_LIMIT: z.coerce.number().default(600),
+  // Task 1.35: refuse passwords found in data breaches (api.pwnedpasswords.com); the API tests switch it off
+  PASSWORD_BREACH_CHECK: z.stringbool().default(true),
 });
 
 export const config = Env.parse(process.env); // crash early if env is wrong

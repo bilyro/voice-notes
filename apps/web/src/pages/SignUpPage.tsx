@@ -4,6 +4,7 @@ import { authClient } from "../lib/auth-client";
 import { Button } from "../components/Button";
 import { PasswordField } from "../components/PasswordField";
 import { useReturnTo } from "../lib/return-to";
+import { PASSWORD_MAX, PASSWORD_MIN, passwordMessage } from "../lib/password-errors";
 import { AuthLayout } from "./AuthLayout";
 import styles from "./Auth.module.css";
 
@@ -38,7 +39,9 @@ export function SignUpPage() {
       if (error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
         return setError(<>An account with this email already exists. <Link to="/login" state={{ from: returnTo }}>Sign in instead</Link></>);
       }
-      if (error.code === "PASSWORD_TOO_SHORT") return setError("The password needs at least 8 characters.");
+      if (error.status === 429) return setError("Too many tries. Wait 10 seconds, then try again.");
+      const about = passwordMessage(error);
+      if (about) return setError(about);
       return setError(error.message ?? "Creating the account failed. Check your connection, then try again.");
     }
     // update the shared session store first, or RequireAuth sees the old (signed-out) session
@@ -57,7 +60,7 @@ export function SignUpPage() {
           <label htmlFor="email" className={styles.label}>Email</label>
           <input id="email" className={styles.input} name="email" type="email" autoComplete="email" required />
         </div>
-        <PasswordField autoComplete="new-password" minLength={8} />
+        <PasswordField autoComplete="new-password" minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} />
         {error && <p className={styles.error} role="alert">{error}</p>}
         <Button type="submit" block disabled={pending} className={styles.submit}>{pending ? "Creating account…" : "Create account"}</Button>
       </form>
