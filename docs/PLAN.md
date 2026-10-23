@@ -1886,6 +1886,14 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [ ] **Verify:** at 1440, 1280, 1100, 1024, 900 and 375 px wide, Delete is on the first line and the right-most; when the group wraps, only its own buttons move; keyboard (Tab, Enter, Escape) and the confirmation work as before; the Task 1.30 and regression suites pass; CI green.
 - [ ] **Commit:** `fix(web): keep Delete on the first row of the actions`
 
+### Task 1.33 — API tests that don't time out on a busy machine
+> Found while re-checking everything (2026-10-23): the integration tests that run ffmpeg and S3 (`prepareAudio`, the pipeline) take 0.5 s alone but over 5 s, Vitest's default limit, when the laptop is busy (load average 30 at the time). So they failed now and then although the audio was right. And after `pnpm build`, Vitest also ran the compiled copies in `apps/api/dist`, so every API test ran twice.
+- [x] **Files:** `apps/api/vitest.config.ts` (new)
+- [x] **Config:** `testTimeout` and `hookTimeout` 20 s for the API package; `exclude` adds `dist/**` to Vitest's defaults.
+- [x] **Verify:** `pnpm turbo lint typecheck test` green 3 times in a row on this machine; after `pnpm build`, the API still runs 12 test files, not 24; CI green on GitHub.
+- [x] **As built:** a small `vitest.config.ts` (Vitest's `configDefaults.exclude` plus `dist/**`). Verified with the machine at load average 30: three full runs green (53/53 API tests each); with a fresh `dist/` from `pnpm build` the API ran 12 test files, not 24. Before, the same load made 1 to 3 of the ffmpeg tests hit 5 s. GitHub CI: checked after the push.
+- [x] **Commit:** `test(api): longer timeout for integration tests and skip dist`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
