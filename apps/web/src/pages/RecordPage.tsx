@@ -6,6 +6,7 @@ import { Button } from "../components/Button";
 import { InfoNote } from "../components/InfoNote";
 import { RecordButton } from "../components/RecordButton";
 import { SegmentedControl, type Tone } from "../components/SegmentedControl";
+import { Select } from "../components/Select";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
 import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
@@ -313,7 +314,7 @@ export function RecordPage() {
 
         <div className={styles.field}>
           <label htmlFor="language" className={styles.label}>Language</label>
-          <select
+          <Select
             id="language"
             className={styles.input}
             value={language}
@@ -325,7 +326,7 @@ export function RecordPage() {
             }}
           >
             {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-          </select>
+          </Select>
           <p id="language-hint" className={styles.hint}>The language people speak in the recording. The transcript and notes use it too.</p>
         </div>
 
@@ -350,14 +351,14 @@ export function RecordPage() {
 
         <div className={styles.field}>
           <label htmlFor="mic" className={styles.label}>Microphone</label>
-          <select id="mic" className={styles.input} value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
+          <Select id="mic" className={styles.input} value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
             {devices.length === 0 && <option value="">Default microphone</option>}
             {devices.map((d) => (
               <option key={d.deviceId} value={d.deviceId === "default" ? "" : d.deviceId}>
                 {d.label || "Microphone"}
               </option>
             ))}
-          </select>
+          </Select>
           {micError ? (
             <p className={styles.error} role="alert">{micError}</p>
           ) : (

@@ -1997,6 +1997,18 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
     - CI green.
 - [x] **Commit:** `feat: edit transcript lines and regenerate notes`
 
+### Task 1.39 — Dropdowns with a proper chevron
+> Reported on 2026-10-23: the browser's own arrow sat squeezed against the right edge of the Language select and didn't match the rest of the form.
+- [x] **Files:** `apps/web/src/components/Select.tsx` (+ CSS module, new), `apps/web/src/pages/RecordPage.tsx`, `apps/web/src/pages/ActionItemsPage.tsx`, `docs/DESIGN.md`
+- [x] **Select:** a native `<select>` (keyboard and screen readers as before) with the browser arrow turned off (`appearance: none`) and our own chevron drawn in CSS with `--color-ink-muted`, 18px from the right edge; 44px of room on the right so long names (the microphone) end with an ellipsis before the chevron. Used for Language, Microphone and the Owner filter.
+- [x] **Verify:** in Chrome at 1280 and 375 px: each select's chevron is inside the field, 18px from the right, vertically centred, and the text never runs under it; choosing still works with the keyboard and the mouse; the Record page and Action items suites still pass; CI green.
+- [x] **As built:**
+  - **The chevron** is a CSS `::after` on a wrapper span (a data-URI icon can't use the colour token). `.wrap .select` outranks each page's own padding.
+  - **Verified in headless Chrome** at 1280 and 375 px: Language, Microphone and Owner all have the browser arrow off and our chevron 18 px from the right, centred and in `rgb(110, 101, 90)` (ink-muted), with 44 px of padding. A long microphone name ends with "…" before the chevron. Choosing still works; the select takes keyboard focus; no sideways scroll.
+  - **Also fixed, found while re-running the Action items suite:** its filters rebuilt the address from the parameters of the last render. A quick second change (Owner, then a pill) started from the old address and silently brought the previous owner back; that was the test's intermittent "Nothing open" failure, which I had wrongly put down to machine load in Tasks 1.32 and 1.33. React Router's functional `setSearchParams` has the same problem (it also reads the last render's params), so the page keeps the latest address in a ref.
+  - **Action items suite** (now with a "two quick changes both stick" check): 20/20 three runs in a row. The Record page suite: 15/15. CI green.
+- [x] **Commit:** `fix(web): dropdowns with a proper chevron`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.

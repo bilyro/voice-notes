@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionItemStatus, type ActionItemEntry, type RecordingMode } from "@vn/shared";
 import { FilterPills } from "../components/FilterPills";
 import { OwnerLine } from "../components/OwnerLine";
+import { Select } from "../components/Select";
 import { api } from "../lib/api";
 import { shortDate } from "../lib/dates";
 import notesStyles from "../components/NotesEditor.module.css";
@@ -28,9 +30,15 @@ export function ActionItemsPage() {
   const [params, setParams] = useSearchParams();
   const status = ActionItemStatus.catch("open").parse(params.get("status") ?? "open");
   const owner = params.get("owner") ?? "";
+  // each change builds on the last one, even before the page has re-rendered with it; otherwise a quick second
+  // change (owner, then a pill) starts from the old address and undoes the first (React Router's functional
+  // update reads the params of the last render too)
+  const latest = useRef(params);
+  useEffect(() => { latest.current = params; }, [params]);
   const set = (patch: Record<string, string>) => {
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(latest.current);
     for (const [k, v] of Object.entries(patch)) if (v) next.set(k, v); else next.delete(k);
+    latest.current = next;
     setParams(next, { replace: true });
   };
 
@@ -68,11 +76,11 @@ export function ActionItemsPage() {
         {(owners.length > 0 || owner) && (
           <label className={styles.owner}>
             <span>Owner</span>
-            <select className={styles.select} value={owner} onChange={(e) => set({ owner: e.target.value })}>
+            <Select inline className={styles.select} value={owner} onChange={(e) => set({ owner: e.target.value })}>
               <option value="">Everyone</option>
               {owners.map((o) => <option key={o} value={o}>{o}</option>)}
               <option value={NO_OWNER}>No owner</option>
-            </select>
+            </Select>
           </label>
         )}
       </div>

@@ -1,0 +1,31 @@
+.wrap {
+  position: relative;
+  display: block;
+}
+.inline {
+  display: inline-block;
+}
+/* .wrap .select beats the page's own padding: room for the chevron, long names end with "…" before it */
+.wrap .select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding-right: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* the chevron: two borders of a small square, turned 45° */
+.wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--color-ink-muted);
+  border-bottom: 2px solid var(--color-ink-muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
