@@ -213,6 +213,8 @@ export function RecordingDetailPage() {
       </div>
 
       <div className={styles.actions}>
+        {/* the everyday actions wrap inside their own group; Delete stays at the right end of the first line (Task 1.32) */}
+        <div className={styles.actionsMain}>
         {rec.status === "ready" && notes && !editing && (
           <>
             <Button variant="secondary" onClick={copyMarkdown}>
@@ -230,26 +232,34 @@ export function RecordingDetailPage() {
             <Button
               ref={shareButton}
               variant="secondary"
+              title={data.shareToken ? "A read-only link to these notes is on" : undefined}
               aria-expanded={sharing}
               aria-controls="share-panel"
               onClick={() => { if (sharing) closeShare(); else { setConfirming(false); setSharing(true); } }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" /></svg>
-              {data.shareToken ? "Shared" : "Share"}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" /><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+                {/* a link is on: a dot inside the icon, so the label (and the row's width) never changes (Task 1.32) */}
+                {data.shareToken && <circle cx="19.5" cy="4.5" r="3.5" fill="currentColor" stroke="none" />}
+              </svg>
+              Share
+              {data.shareToken && <span className="visually-hidden"> (link is on)</span>}
             </Button>
           </>
         )}
+        </div>
         {/* every status can be deleted: a failed or stuck recording should not stay forever */}
         <Button
           ref={deleteButton}
           variant="secondary"
           className={styles.deleteButton}
+          aria-label="Delete"
+          title="Delete recording"
           aria-expanded={confirming}
           aria-controls="confirm-delete"
           onClick={() => { if (confirming) closeConfirm(); else { setSharing(false); setConfirming(true); } }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M6 7l1 13h10l1-13" /><path d="M9 7V4h6v3" /></svg>
-          Delete
         </Button>
       </div>
 

@@ -1881,10 +1881,17 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.32 — Delete stays on the first row
 > With Share added (Task 1.30) the actions row needs 742 px but has 680 px, so "Delete" wrapped onto its own line, pushed right ("it jumped").
-- [ ] **Files:** `apps/web/src/pages/RecordingDetailPage.tsx` (+ CSS module), `docs/DESIGN.md`
-- [ ] **Layout:** the everyday buttons (Copy as Markdown, Download .md, Edit notes, Share) sit in their own group that wraps on its own. Delete becomes a 44 px icon button (trash icon, `aria-label="Delete"`, tooltip "Delete recording") that always stays at the right end of the first line. Same inline confirmation as before.
-- [ ] **Verify:** at 1440, 1280, 1100, 1024, 900 and 375 px wide, Delete is on the first line and the right-most; when the group wraps, only its own buttons move; keyboard (Tab, Enter, Escape) and the confirmation work as before; the Task 1.30 and regression suites pass; CI green.
-- [ ] **Commit:** `fix(web): keep Delete on the first row of the actions`
+- [x] **Files:** `apps/web/src/pages/RecordingDetailPage.tsx` (+ CSS module), `docs/DESIGN.md`
+- [x] **Layout:** the everyday buttons (Copy as Markdown, Download .md, Edit notes, Share) sit in their own group that wraps on its own. Delete becomes a 44 px icon button (trash icon, `aria-label="Delete"`, tooltip "Delete recording") that always stays at the right end of the first line. Same inline confirmation as before.
+- [x] **Verify:** at 1440, 1280, 1100, 1024, 900 and 375 px wide, Delete is on the first line and the right-most; when the group wraps, only its own buttons move; keyboard (Tab, Enter, Escape) and the confirmation work as before; the Task 1.30 and regression suites pass; CI green.
+- [x] **As built:**
+  - **Sizes:** the icon button is 40 px, not the planned 44, so it matches the 40 px secondary buttons next to it.
+  - **Group widths:** the actions row has a wrapping group plus Delete (`flex: none`). The group needs 626 px of the 632 px left beside Delete.
+  - **Share's label** (Task 1.30) said "Shared" while a link was on. That was 10 px wider and pushed it onto a second line at 1280 px, so it now always says "Share". A link that is on shows as a filled dot inside the icon, a tooltip, and "(link is on)" for screen readers.
+  - **Verified in headless Chrome:**
+    - With a link on, at 1440, 1280, 1100, 1024, 900 and 375 px, Delete is on the first line, right-most and 40×40, with no sideways scroll. At 1440 and 1280 all buttons fit on one line; at 1100 and 1024 only Share wraps, inside its group.
+    - Suites: Task 1.30 (23, updated for the new label and dot), the regression suite (36, Delete found by its `aria-label`, Escape returns focus to it) and Task 1.29 (19, twice; one earlier run had 2 timing misses while the laptop was at load 30). CI green.
+- [x] **Commit:** `fix(web): keep Delete on the first row of the actions`
 
 ### Task 1.33 — API tests that don't time out on a busy machine
 > Found while re-checking everything (2026-10-23): the integration tests that run ffmpeg and S3 (`prepareAudio`, the pipeline) take 0.5 s alone but over 5 s, Vitest's default limit, when the laptop is busy (load average 30 at the time). So they failed now and then although the audio was right. And after `pnpm build`, Vitest also ran the compiled copies in `apps/api/dist`, so every API test ran twice.
