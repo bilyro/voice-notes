@@ -1901,6 +1901,55 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **As built:** a small `vitest.config.ts` (Vitest's `configDefaults.exclude` plus `dist/**`). Verified with the machine at load average 30: three full runs green (53/53 API tests each); with a fresh `dist/` from `pnpm build` the API ran 12 test files, not 24. Before, the same load made 1 to 3 of the ffmpeg tests hit 5 s. GitHub CI: checked after the push.
 - [x] **Commit:** `test(api): longer timeout for integration tests and skip dist`
 
+> **Decided on 2026-10-23 (next batch):** record a browser tab's sound, stronger passwords, an account page, a names-and-terms hint, and editing the transcript with "Regenerate notes" (Tasks 1.34–1.38). The desktop app (Phase 3) comes after them.
+
+### Task 1.34 — Record a browser tab's sound with the microphone
+> Fixes the reported case properly (a video, or Meet or Zoom in the browser) without speakers or the desktop app. Chrome and Edge can share a tab's audio; Safari and Firefox can't, so there the option is hidden.
+- [ ] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/mix-audio.ts` (new), `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `docs/DESIGN.md`
+- [ ] **Record page:** a "Sound" choice under Microphone with two options: "Microphone" and "Microphone + a browser tab". Hint for the second: "For a video or a call in another tab. Chrome asks which tab: tick 'Also share tab audio'." Shown only where `getDisplayMedia` exists and the browser is Chromium.
+- [ ] **Start:** `getDisplayMedia({ video: true, audio: true })` (video is required to pick a tab; its track is stopped at once). No audio track → stop and say "That tab's sound wasn't shared. Start again and tick 'Also share tab audio'." The mic and tab streams are mixed with Web Audio into one `MediaStreamDestination`, which is what `MediaRecorder` records. The level meter shows the mix.
+- [ ] **During:** a chip "Mic + tab" next to the mode chip. If the tab stops sharing (the browser's "Stop sharing" bar), recording goes on with the microphone, with the status "The tab stopped sharing. Recording the microphone only." Pause, Stop, chunks and retries are unchanged.
+- [ ] **Verify:** in headless Chrome (a fake tab stream injected for `getDisplayMedia`, speech in it and silence on the mic), the transcript has the tab's speech; with mic speech + tab speech both are in it; no tab audio → the message, nothing created; stopping the tab mid-recording → the status, the recording continues and saves; the option is hidden when `getDisplayMedia` is missing; CI green. Real check on your Mac with a YouTube tab.
+- [ ] **Commit:** `feat(web): record a browser tab's sound together with the microphone`
+
+### Task 1.35 — Stronger password rules
+> Today: at least 8 characters, nothing else. New rules, following current NIST advice (SP 800-63B: length and breach checks, no forced symbols or rotation).
+- [ ] **Files:** `apps/api/src/auth.ts`, `apps/api/src/config.ts`, `apps/api/package.json` (test script), API tests, `apps/web/src/pages/SignUpPage.tsx`, `apps/web/src/components/PasswordField.tsx`, `.env.example`
+- [ ] **Length:** at least **12** characters, at most 128 (`minPasswordLength` / `maxPasswordLength`).
+- [ ] **Breached passwords:** Better Auth's `haveIBeenPwned` plugin (part of better-auth, no new dependency) refuses passwords found in known data breaches, on sign-up and password change. It only sends the first 5 characters of the password's SHA-1 hash to api.pwnedpasswords.com (k-anonymity), never the password. Setting `PASSWORD_BREACH_CHECK` (default `true`); the API tests switch it off so they don't need the internet.
+- [ ] **Not your name or email:** a password containing your email's name part or your name (4+ letters, any case) is refused (a Better Auth `before` hook on sign-up and change-password).
+- [ ] **Sign-in attempts:** Better Auth's rate limit, which is on in production by default, stays on. Its sign-in rule (a few attempts per 10 s per IP) is documented in the README.
+- [ ] **Web:** the hint "At least 12 characters" with the tick; messages: too short → "The password needs at least 12 characters."; breached → "This password appeared in a data breach. Choose a different one."; contains name/email → "Don't use your name or email in the password." Existing accounts keep their password (the rules apply when a password is set).
+- [ ] **Verify:** API tests: 11 characters → refused, 12 → accepted, containing the email name → refused, a breached password refused with the check on (fetch mocked); browser: the three messages and a strong password signs up; old accounts still sign in; CI green.
+- [ ] **Commit:** `feat(auth): stronger password rules`
+
+### Task 1.36 — Account page
+> Change your name and password, take your data with you, delete your account (GDPR basics, Phase 7).
+- [ ] **Files:** `apps/web/src/pages/AccountPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `apps/api/src/modules/account/*` (new: export, delete), `apps/api/src/server.ts`, `docs/DESIGN.md`
+- [ ] **Page `/account`** (the sidebar's account card opens it):
+  - **Name:** edit and save (`updateUser`).
+  - **Password:** current + new + repeat (`changePassword` with `revokeOtherSessions: true`, the Task 1.35 rules).
+  - **Your data:** "Download my data" gives one JSON file with your recordings, transcripts, notes (latest version), action items and the account's email and created date. The audio is listed by recording; each can be downloaded from its page.
+  - **Delete account:** an inline confirmation where you type your email. Then all recordings are deleted (storage first, like Task 1.17), then the user, sessions and accounts; you land on the landing page.
+- [ ] **API:** `GET /api/account/export` (JSON, `Content-Disposition: attachment`), `DELETE /api/account` (needs `{ email }` matching the session's), both `requireUser`.
+- [ ] **Verify:** API tests: the export has only your data; delete removes recordings, storage objects, user, sessions; a wrong email → 400; another user unaffected. Browser: rename shows in the sidebar; changing the password signs other sessions out and the new one works; the download is valid JSON; deleting goes to the landing page, and signing in again fails; phone width; CI green.
+- [ ] **Commit:** `feat: account page with export and delete`
+
+### Task 1.37 — Names and terms hint
+> The speech-to-text accepts a short hint text, so names ("Olena", "Riverside School") and terms get spelled right.
+- [ ] **Files:** `apps/api/migrations/005_vocabulary.ts` (new), `packages/shared/src/schemas/recording.ts`, `apps/api/src/ai/stt/*` (pass `prompt`), `apps/api/src/ai/notes/prompts.ts`, `apps/api/src/jobs/*`, `apps/web/src/pages/RecordPage.tsx`, `docs/DESIGN.md`
+- [ ] **Record page:** an optional "Names and terms" field ("Olena, Andrii, Riverside School, PTA"), up to 300 characters, remembered in this browser. Saved on the recording (`recordings.vocabulary`).
+- [ ] **Pipeline:** Whisper gets it as `prompt` (OpenAI-compatible; Groq and OpenAI both accept it). The notes prompt adds "Spell these names and terms like this: …".
+- [ ] **Verify:** a recording with an unusual name, transcribed with and without the hint, gets the spelling right with it; the field is optional and remembered; CI green.
+- [ ] **Commit:** `feat: names and terms hint for better transcripts`
+
+### Task 1.38 — Edit the transcript and regenerate the notes
+- [ ] **Files:** `apps/api/src/modules/recordings/*` (edit a segment, regenerate), `apps/web/src/components/Transcript.tsx` (+ CSS module), `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`
+- [ ] **Edit a line:** on the Transcript tab, each line gets an "Edit" (pencil) that turns it into a text field with Save and Cancel; `PATCH /api/recordings/:id/segments/:segmentId { text }`. Search picks it up at once (the generated `tsv` column).
+- [ ] **Regenerate notes:** a secondary "Regenerate notes" with an inline confirmation: pick the mode (meeting, lesson or memo) and read "Your edits to the notes are replaced. The current version stays in the history." `POST /api/recordings/:id/regenerate { mode }` sets `summarizing` and queues the notes job (a new AI version).
+- [ ] **Verify:** API tests (owner only, 404 for others, empty text refused, regenerate queues the job and changes the mode); browser: edit a misheard word → saved, found by search; regenerate as lesson → concepts and review questions appear; CI green.
+- [ ] **Commit:** `feat: edit transcript lines and regenerate notes`
+
 ### ✅ Phase 1 acceptance test (do it manually, then write it down as a checklist in the README)
 - [x] Record **5 minutes of English** speech in Chrome → transcript and notes appear without any manual step.
 - [x] Lesson mode produces concepts + review questions; memo mode produces ideas.
@@ -1963,7 +2012,7 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - "Ask your recordings" chat: retrieve top segments → answer with links to `[recording, timestamp]`.
 - "Assign" for action items without an owner, on the Action items page from Task 1.29.
 
-### Phase 3 — Desktop app, Electron (≈2 weeks) — next after Task 1.30
+### Phase 3 — Desktop app, Electron (≈2 weeks) — next after Task 1.38
 - Electron shell loading the web UI; same API and auth.
 - Tray icon, global hotkey to start/stop, "always on top" mini recorder.
 - **System audio capture** for Zoom/Meet/Teams calls, mixed with the mic via Web Audio API. Do a 1–2 day spike first on your OS — Windows and macOS work differently, and this is the riskiest part of the whole project.
