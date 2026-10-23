@@ -1905,12 +1905,23 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 ### Task 1.34 — Record a browser tab's sound with the microphone
 > Fixes the reported case properly (a video, or Meet or Zoom in the browser) without speakers or the desktop app. Chrome and Edge can share a tab's audio; Safari and Firefox can't, so there the option is hidden.
-- [ ] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/mix-audio.ts` (new), `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `docs/DESIGN.md`
-- [ ] **Record page:** a "Sound" choice under Microphone with two options: "Microphone" and "Microphone + a browser tab". Hint for the second: "For a video or a call in another tab. Chrome asks which tab: tick 'Also share tab audio'." Shown only where `getDisplayMedia` exists and the browser is Chromium.
-- [ ] **Start:** `getDisplayMedia({ video: true, audio: true })` (video is required to pick a tab; its track is stopped at once). No audio track → stop and say "That tab's sound wasn't shared. Start again and tick 'Also share tab audio'." The mic and tab streams are mixed with Web Audio into one `MediaStreamDestination`, which is what `MediaRecorder` records. The level meter shows the mix.
-- [ ] **During:** a chip "Mic + tab" next to the mode chip. If the tab stops sharing (the browser's "Stop sharing" bar), recording goes on with the microphone, with the status "The tab stopped sharing. Recording the microphone only." Pause, Stop, chunks and retries are unchanged.
-- [ ] **Verify:** in headless Chrome (a fake tab stream injected for `getDisplayMedia`, speech in it and silence on the mic), the transcript has the tab's speech; with mic speech + tab speech both are in it; no tab audio → the message, nothing created; stopping the tab mid-recording → the status, the recording continues and saves; the option is hidden when `getDisplayMedia` is missing; CI green. Real check on your Mac with a YouTube tab.
-- [ ] **Commit:** `feat(web): record a browser tab's sound together with the microphone`
+- [x] **Files:** `apps/web/src/recorder/use-recorder.ts`, `apps/web/src/recorder/mix-audio.ts` (new), `apps/web/src/pages/RecordPage.tsx` (+ CSS module), `apps/web/src/components/SegmentedControl.tsx` (+ CSS module: `wide`), `docs/DESIGN.md`
+- [x] **Record page:** a "Sound" choice under Microphone with two options: "Microphone" and "Mic + browser tab". Hint for the second: "For a video or a call in another tab. Chrome asks which tab: tick 'Also share tab audio'." Shown only where `getDisplayMedia` exists and the browser is Chromium.
+- [x] **Start:** `getDisplayMedia({ video: true, audio: true })` (video is required to pick a tab; its track is stopped at once). No audio track → stop and say "That tab's sound wasn't shared. Start again and tick 'Also share tab audio'." The mic and tab streams are mixed with Web Audio into one `MediaStreamDestination`, which is what `MediaRecorder` records. The level meter shows the mix.
+- [x] **During:** a chip "Mic + tab" next to the mode chip. If the tab stops sharing (the browser's "Stop sharing" bar), recording goes on with the microphone, with the status "The tab stopped sharing. Recording the microphone only." Pause, Stop, chunks and retries are unchanged.
+- [x] **Verify:** in headless Chrome (a fake tab stream injected for `getDisplayMedia`, speech in it and silence on the mic), the transcript has the tab's speech; with mic speech + tab speech both are in it; no tab audio → the message, nothing created; stopping the tab mid-recording → the status, the recording continues and saves; the option is hidden when `getDisplayMedia` is missing; CI green. Real check on your Mac with a YouTube tab.
+- [x] **As built:**
+  - **Start order:** `useRecorder.start(deviceId, { tab, beforeStart })` opens the sound first, then calls `beforeStart` (where the page creates the recording), then starts `MediaRecorder`. The browser only shows its tab picker right after a click, and creating the recording on a slow connection could have used that up. A failure in any step closes what was opened. A cancelled picker or a tab without sound gets its own message and leaves nothing behind.
+  - **Mixing:** `mix-audio.ts` mixes the microphone and the tab into one `MediaStreamDestination`. When the tab's track ends, its source just goes silent, so the recording, chunks and retries carry on unchanged. The picked tab's video track is stopped at once.
+  - **Label:** "Microphone + a browser tab" spilled out of its choice card (the cards don't wrap their text), so the label is "Mic + browser tab". `SegmentedControl` got a `wide` variant (at least 200 px per card) so the two Sound cards stack on a phone.
+  - **Verified in headless Chrome** (`getDisplayMedia` and `getUserMedia` replaced by streams playing test speech or silence), 15 checks:
+    - The choice and hints; a cancelled picker and a tab without sound → their messages, nothing created.
+    - Tab speech with a silent mic → in the transcript; mic speech then tab speech → both in the transcript.
+    - "Stop sharing" mid-recording → status, "Mic only" chip, still recording, saved with the tab's earlier speech.
+    - "Microphone" never opens the picker; the choice is remembered; hidden without `getDisplayMedia`; no page errors.
+  - **Also verified:** every choice card's label fits at 1280 and 375 px; the live-recording suites for Tasks 1.22 (7) and 1.26 (23, after fixing a weak English-detection check in the test) still pass; CI green.
+  - **Not verifiable here:** a real tab's sound in Chrome on your Mac.
+- [x] **Commit:** `feat(web): record a browser tab's sound together with the microphone`
 
 ### Task 1.35 — Stronger password rules
 > Today: at least 8 characters, nothing else. New rules, following current NIST advice (SP 800-63B: length and breach checks, no forced symbols or rotation).

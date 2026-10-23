@@ -11,7 +11,8 @@ import { formatDuration } from "../lib/format";
 import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
 import { checkAudioFile, sliceFile, titleFromFileName, UPLOAD_ACCEPT } from "../recorder/file-upload";
 import { useAudioLevel } from "../recorder/use-audio-level";
-import { CHUNK_MS, MIC_PROCESSING, pickMimeType, useRecorder } from "../recorder/use-recorder";
+import { CHUNK_MS, MIC_PROCESSING, pickMimeType, TabShareError, useRecorder } from "../recorder/use-recorder";
+import { canRecordTab } from "../recorder/mix-audio";
 import page from "./Page.module.css";
 import styles from "./RecordPage.module.css";
 
@@ -38,6 +39,25 @@ const LANGUAGES: { value: LanguageCode; label: string }[] = [
 ];
 const LANGUAGE_KEY = "vn.recording-language";
 
+// Task 1.34: the microphone alone, or mixed with a shared browser tab (Chrome and Edge on a computer)
+type Sound = "mic" | "tab";
+const SOUNDS: { value: Sound; label: string }[] = [
+  { value: "mic", label: "Microphone" },
+  { value: "tab", label: "Mic + browser tab" },
+];
+const SOUND_HINTS: Record<Sound, string> = {
+  mic: "What the microphone hears.",
+  tab: "For a video or a call in another tab. The browser asks which tab: tick “Also share tab audio”.",
+};
+const SOUND_KEY = "vn.recording-sound";
+function savedSound(): Sound {
+  try {
+    return localStorage.getItem(SOUND_KEY) === "tab" ? "tab" : "mic";
+  } catch {
+    return "mic";
+  }
+}
+
 /** The last language picked in this browser (a convenience only: storage may be blocked or empty). */
 function savedLanguage(): LanguageCode {
   try {
@@ -56,6 +76,10 @@ export function RecordPage() {
   const [mode, setMode] = useState<RecordingMode>("meeting");
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<LanguageCode>(savedLanguage);
+  const [tabSupported] = useState(canRecordTab);
+  const [sound, setSound] = useState<Sound>(savedSound);
+  const [liveWithTab, setLiveWithTab] = useState(false);
+  const [tabEnded, setTabEnded] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [preview, setPreview] = useState<MediaStream | null>(null);
@@ -72,7 +96,7 @@ export function RecordPage() {
   const idRef = useRef<string | null>(null);
   const uploaderRef = useRef<ChunkUploader | null>(null);
   const durationRef = useRef(0);
-  const recorder = useRecorder((blob, index) => uploaderRef.current?.enqueue(blob, index));
+  const recorder = useRecorder((blob, index) => uploaderRef.current?.enqueue(blob, index), () => setTabEnded(true));
   const paused = recorder.state === "paused";
   const { level, peak, history: bars } = useAudioLevel(phase === "setup" ? preview : recorder.stream, { historyLength: BARS, paused });
 
@@ -125,24 +149,34 @@ export function RecordPage() {
   async function startRecording() {
     setError(null);
     setPhase("starting");
-    let id: string | null = null;
+    setTabEnded(false);
+    const withTab = tabSupported && sound === "tab";
+    // the sound sources open first (the browser shows its tab picker only right after the click), then the recording is created
+    const at: { stage: "sound" | "create" | "record" } = { stage: "sound" };   // an object: the callback below moves it on
     try {
-      ({ id } = await api<{ id: string }>("/recordings", {
-        method: "POST",
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ mode, title: title.trim() || undefined, language, mimeType: pickMimeType() || "audio/webm", source: "web" }),
-      }));
-      idRef.current = id;
-      uploaderRef.current = new ChunkUploader(id, setUpload);
-      setUpload(NO_UPLOADS);
-      setElapsed(0);
-      await recorder.start(deviceId || undefined);
+      await recorder.start(deviceId || undefined, {
+        tab: withTab,
+        beforeStart: async () => {
+          at.stage = "create";
+          const { id } = await api<{ id: string }>("/recordings", {
+            method: "POST",
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ mode, title: title.trim() || undefined, language, mimeType: pickMimeType() || "audio/webm", source: "web" }),
+          });
+          idRef.current = id;
+          uploaderRef.current = new ChunkUploader(id, setUpload);
+          setUpload(NO_UPLOADS);
+          setElapsed(0);
+          at.stage = "record";
+        },
+      });
+      setLiveWithTab(withTab);
       setPhase("live");
-    } catch {
-      if (id) api(`/recordings/${id}`, { method: "DELETE" }).catch(() => {});   // don't leave an empty recording behind
-      setError(id
-        ? "The microphone could not start. Check that it is connected and allowed for this site, then try again."
-        : "The recording could not be created. Check your connection, then try again.");
+    } catch (e) {
+      if (at.stage === "record" && idRef.current) api(`/recordings/${idRef.current}`, { method: "DELETE" }).catch(() => {});   // don't leave an empty recording behind
+      setError(e instanceof TabShareError ? e.message
+        : at.stage === "create" ? "The recording could not be created. Check your connection, then try again."
+        : "The microphone could not start. Check that it is connected and allowed for this site, then try again.");
       setPhase("setup");
     }
   }
@@ -310,6 +344,23 @@ export function RecordPage() {
           <p className={styles.hint}>Recording a video or a call on this computer? Play it through the speakers: headphones keep the sound away from the microphone.</p>
         </div>
 
+        {tabSupported && (
+          <div className={styles.modes}>
+            <SegmentedControl
+              legend="Sound"
+              name="sound"
+              wide
+              options={SOUNDS}
+              value={sound}
+              hint={SOUND_HINTS[sound]}
+              onChange={(v) => {
+                setSound(v);
+                try { localStorage.setItem(SOUND_KEY, v); } catch { /* private window: just not remembered */ }
+              }}
+            />
+          </div>
+        )}
+
         <div className={styles.start}>
           <RecordButton action="start" label="Start recording" onClick={startRecording} disabled={phase === "starting" || !!micError} />
           <p className={styles.consent}>Tell everyone they are being recorded. Audio is saved every 10 seconds.</p>
@@ -380,6 +431,7 @@ export function RecordPage() {
         <span className={styles.chips}>
           <span className={styles.chip}>{MODES.find((m) => m.value === mode)!.label}</span>
           {language !== "en" && <span className={styles.chip}>{LANGUAGE_NAMES[language]}</span>}
+          {liveWithTab && <span className={styles.chip}>{tabEnded ? "Mic only" : "Mic + tab"}</span>}
         </span>
         {phase === "live" && !paused && (
           <span className={styles.badge}>
@@ -435,9 +487,10 @@ export function RecordPage() {
         </div>
       )}
       {phase === "live" && (
-        <p className={`${styles.offline} ${upload.offline ? styles.offlineNow : ""}`} role="status">
+        <p className={`${styles.offline} ${upload.offline || tabEnded ? styles.offlineNow : ""}`} role="status">
           {upload.offline
             ? `No connection. Keep recording: the last ${unsaved} is kept here and uploads when you are back online.`
+            : tabEnded ? "The tab stopped sharing. Recording the microphone only."
             : "Lost connection? Keep recording. Audio uploads when you are back online."}
         </p>
       )}

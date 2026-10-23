@@ -16,6 +16,9 @@
   gap: var(--space-3);
   margin-top: 10px;
 }
+.wide {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
 
 .segment {
   position: relative;

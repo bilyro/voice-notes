@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { mixAudio } from "./mix-audio";
 
 export const CHUNK_MS = 10_000;
 
@@ -9,13 +10,17 @@ export const CHUNK_MS = 10_000;
  */
 export const MIC_PROCESSING = { echoCancellation: false, noiseSuppression: false, autoGainControl: true } as const;
 
+/** Starting with a tab failed for a reason the user can fix; `message` says how. */
+export class TabShareError extends Error {}
+
 export function pickMimeType() {
   for (const t of ["audio/webm;codecs=opus", "audio/mp4"]) if (MediaRecorder.isTypeSupported(t)) return t;
   return "";
 }
 
-export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
+export function useRecorder(onChunk: (blob: Blob, index: number) => void, onTabEnded?: () => void) {
   const recRef = useRef<MediaRecorder | null>(null);
+  const cleanup = useRef<() => void>(() => {});      // stops the microphone, the shared tab and the mixer
   const indexRef = useRef(0);
   const startedAt = useRef(0);
   const pausedAt = useRef(0);       // 0 while not paused
@@ -23,11 +28,55 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
   const [state, setState] = useState<"idle" | "recording" | "paused">("idle");
   const [stream, setStream] = useState<MediaStream | null>(null);
 
-  /** `deviceId` picks the microphone; omitted = the browser's default. */
-  async function start(deviceId?: string) {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: deviceId ? { exact: deviceId } : undefined, ...MIC_PROCESSING },
-    });
+  /**
+   * `deviceId` picks the microphone (omitted = the browser's default). With `tab`, the browser first asks which tab to
+   * share, and its sound is mixed with the microphone (Task 1.34). `beforeStart` runs once the sound sources are open
+   * and before recording begins (the page creates the recording there): the browser only shows its tab picker right
+   * after a click, so that has to come first. If `beforeStart` throws, everything is closed again.
+   */
+  async function start(deviceId?: string, { tab = false, beforeStart }: { tab?: boolean; beforeStart?: () => Promise<void> } = {}) {
+    let display: MediaStream | null = null;
+    if (tab) {
+      try {
+        display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });   // video is needed to pick a tab
+      } catch {
+        throw new TabShareError("No tab was shared. Start again and pick a tab, or choose “Microphone”.");
+      }
+      display.getVideoTracks().forEach((t) => t.stop());                                       // only the sound is kept
+      if (display.getAudioTracks().length === 0) {
+        display.getTracks().forEach((t) => t.stop());
+        throw new TabShareError("That tab's sound wasn't shared. Start again and tick “Also share tab audio”.");
+      }
+    }
+    let mic: MediaStream;
+    try {
+      mic = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: deviceId ? { exact: deviceId } : undefined, ...MIC_PROCESSING },
+      });
+    } catch (e) {
+      display?.getTracks().forEach((t) => t.stop());
+      throw e;
+    }
+    let stream = mic;
+    cleanup.current = () => mic.getTracks().forEach((t) => t.stop());
+    if (display) {
+      const tabStream = display;
+      const mixer = mixAudio([mic, tabStream]);
+      stream = mixer.stream;
+      // "Stop sharing" in the browser ends the tab's track: the mix goes on with the microphone
+      tabStream.getAudioTracks()[0]!.addEventListener("ended", () => onTabEnded?.());
+      cleanup.current = () => {
+        mic.getTracks().forEach((t) => t.stop());
+        tabStream.getTracks().forEach((t) => t.stop());
+        mixer.close();
+      };
+    }
+    try {
+      await beforeStart?.();
+    } catch (e) {
+      cleanup.current();
+      throw e;
+    }
     const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), audioBitsPerSecond: 32_000 });
     indexRef.current = 0;
     rec.ondataavailable = (e) => { if (e.data.size > 0) onChunk(e.data, indexRef.current++); };
@@ -66,6 +115,7 @@ export function useRecorder(onChunk: (blob: Blob, index: number) => void) {
       if (!rec) return resolve(0);
       rec.onstop = () => {
         rec.stream.getTracks().forEach((t) => t.stop());
+        cleanup.current();
         const duration = elapsed();
         recRef.current = null;
         setStream(null);

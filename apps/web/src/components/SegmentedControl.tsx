@@ -10,14 +10,16 @@ type Props<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   hint?: string;
+  /** longer labels: each card gets at least 200px, so on a phone they stack instead of overflowing */
+  wide?: boolean;
 };
 
 /** A row of choice cards with real radio inputs inside, so arrow keys and screen readers work as usual. */
-export function SegmentedControl<T extends string>({ legend, name, options, value, onChange, hint }: Props<T>) {
+export function SegmentedControl<T extends string>({ legend, name, options, value, onChange, hint, wide }: Props<T>) {
   return (
     <fieldset className={styles.fieldset}>
       <legend className={styles.legend}>{legend}</legend>
-      <div className={styles.track}>
+      <div className={`${styles.track} ${wide ? styles.wide : ""}`}>
         {options.map((o) => (
           <label key={o.value} className={styles.segment} data-tone={o.tone}>
             <input
