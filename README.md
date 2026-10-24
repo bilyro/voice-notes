@@ -71,11 +71,12 @@ Then open http://localhost:5173 and create an account.
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | Start the API (with auto-reload) and the web app |
+| `pnpm dev` | Start the API (with auto-reload) and the web app (not the desktop app) |
+| `pnpm --filter desktop dev` | Open the desktop app (macOS, Electron) on the running web app; see [Desktop app](#desktop-app-macos) |
 | `pnpm turbo lint typecheck test` | All checks, the same ones CI runs |
 | `pnpm build` | Build every package |
 | `pnpm format` | Format the code with Prettier |
-| `pnpm --filter <pkg> <script>` | Run a script in one package (`@vn/api`, `@vn/shared`, `web`) |
+| `pnpm --filter <pkg> <script>` | Run a script in one package (`@vn/api`, `@vn/shared`, `web`, `desktop`) |
 | `pnpm --filter @vn/api knex migrate:latest` | Apply database migrations (`migrate:rollback` undoes the last batch) |
 | `pnpm --filter @vn/api auth:migrate` | Create or update Better Auth's tables |
 
@@ -87,10 +88,26 @@ Turborepo caches task results in `.turbo/`. Add `--force` to run a task again wi
 apps/
   api/          Fastify API: config, auth, database, migrations
   web/          React app: pages, router, API and auth clients
+  desktop/      Electron app for macOS: a window on the web app (main.ts, preload.ts)
 packages/
   shared/       Zod schemas and types shared by the API and clients
 docs/PLAN.md    Implementation plan, worked through task by task
 ```
+
+## Desktop app (macOS)
+
+The desktop app is the web app in its own window (Electron). It uses the same API, and you sign in the same way; it stays signed in between launches.
+
+```bash
+pnpm dev                        # API + web first, in another terminal
+pnpm --filter desktop dev       # builds main.ts / preload.ts and opens the app
+```
+
+- It loads `http://localhost:5173`. Set `VOICE_NOTES_URL` to point it at another address.
+- Links to other sites open in your normal browser.
+- The window's size and position are kept in `~/Library/Application Support/Voice notes/window-state.json`.
+- The first recording asks for microphone access for "Electron" (the development build).
+- Recordings made in the app are saved with `source: "desktop"`.
 
 ## API
 

@@ -12,3 +12,8 @@ allowBuilds:
   onnxruntime-node: false
   # its postinstall only checks the installed version
   protobufjs: false
+  # the desktop app (Task 3.1): its install script downloads the Electron program for this computer
+  # (CI sets ELECTRON_SKIP_BINARY_DOWNLOAD: lint and typecheck don't need it)
+  electron: true
+  # via electron-builder: picks the 7-Zip binary for Windows installers; we only build for macOS
+  electron-winstaller: false

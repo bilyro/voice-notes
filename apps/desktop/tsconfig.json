@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // no "type": "module" in package.json, so this compiles to CommonJS: a sandboxed preload can't be an ES module
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "declaration": false,
+    "types": ["node"]
+  },
+  "include": ["main.ts", "preload.ts"]
+}

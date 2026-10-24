@@ -1,0 +1,19 @@
+{
+  "name": "desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Voice notes for macOS: the web app in its own window (Phase 3)",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsc -p tsconfig.json && electron .",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint main.ts preload.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.17.0",
+    "typescript": "~6.0.3"
+  }
+}

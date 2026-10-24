@@ -2168,10 +2168,31 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **Commit:** `docs(plan): desktop sound capture test result`
 
 #### Task 3.1 — Desktop app shell
-- [ ] **Files:** `apps/desktop/` (new: `package.json` with `electron` + `electron-builder`, `main.ts`, `preload.ts`), `pnpm-workspace.yaml`, `turbo.json`, `apps/api/src/config.ts` (allow the desktop origin), README
-- [ ] **App:** a window that loads the web app (dev: `http://localhost:5173`; later the server address from settings), the same sign-in (cookies kept by Electron), links to other sites open in the normal browser, window size and position remembered, a standard macOS menu. The preload exposes `window.voiceNotesDesktop = { version }`, so the web app knows it runs inside the app; recordings made there get `source: "desktop"`.
-- [ ] **Verify:** `pnpm --filter desktop dev` opens the app; sign in, record and play back work as in the browser; external links open in Safari or Chrome; the window comes back where it was; CI green.
-- [ ] **Commit:** `feat(desktop): Electron app shell`
+- [x] **Files:** `apps/desktop/` (new: `package.json` with `electron` + `electron-builder`, `main.ts`, `preload.ts`), `pnpm-workspace.yaml`, `turbo.json`, `apps/api/src/config.ts` (allow the desktop origin), README
+- [x] **App:** a window that loads the web app (dev: `http://localhost:5173`; later the server address from settings), the same sign-in (cookies kept by Electron), links to other sites open in the normal browser, window size and position remembered, a standard macOS menu. The preload exposes `window.voiceNotesDesktop = { version }`, so the web app knows it runs inside the app; recordings made there get `source: "desktop"`.
+- [x] **Verify:** `pnpm --filter desktop dev` opens the app; sign in, record and play back work as in the browser; external links open in Safari or Chrome; the window comes back where it was; CI green.
+- [x] **As built:**
+  - **Versions:** Electron 45.0.0 and electron-builder 26.18. `main.ts` and `preload.ts` compile to CommonJS: a sandboxed preload can't be an ES module.
+  - **Security:** the page is sandboxed with context isolation, and gets only `window.voiceNotesDesktop = { version }`, no Node. Permissions are the microphone and clipboard write, for our own address only.
+  - **Behaviour:**
+    - **Links:** `setWindowOpenHandler` and `will-navigate` keep our own links in the window. Every other http(s)/mailto link goes to `shell.openExternal`; file: and custom schemes are dropped.
+    - **Window:** one copy of the app at a time. Closing the window keeps the app in the Dock (macOS). Size and position are saved in `userData/window-state.json` and ignored if they would land off every screen. `app.setName("Voice notes")` gives the menu's name and the settings folder.
+  - **Outside the listed files:**
+    - `apps/web/src/lib/desktop.ts` and RecordPage, for `source: "desktop"`.
+    - The root `pnpm dev` skips the desktop app (`--filter=!desktop`).
+    - CI installs with `ELECTRON_SKIP_BINARY_DOWNLOAD`.
+    - `pnpm-workspace.yaml` allows Electron's download script, and leaves electron-winstaller's (Windows-only) off.
+  - **Not needed:** `config.ts` (allow the desktop origin). The app loads the web app's own address, so the API sees the same origin as in a browser. It comes back when the app loads a server from its settings, if that ever differs from `WEB_ORIGIN`.
+  - **Not yet:** the "Mic + browser tab" choice still shows in the app, and it can't work there: Electron has no tab picker. Task 3.2 replaces it with the computer's sound.
+  - **Verified:** the app driven over its DevTools port (14 checks):
+    - it opens the web app at 1200×820, exposes the version, and has no `require` or `process`;
+    - sign in, a 14 s recording (a WAV in place of the microphone) processed with `source = desktop`, and playback;
+    - external links handed to the browser while the window stays put, and our own `target=_blank` link stays inside;
+    - moved to 180,90 at 1000×700, quit and reopened: the same place, still signed in; a saved position off every screen is ignored;
+    - no page errors.
+  - **Also checked:** `pnpm --filter desktop dev` opens it; the menu is Voice notes / File / Edit / View / Window; CI green (11 tasks).
+  - **Not tested:** the real microphone in this build (it asks for permission once, as in Task 3.0).
+- [x] **Commit:** `feat(desktop): Electron app shell`
 
 #### Task 3.2 — Record the computer's sound in the app
 - [ ] **Files:** `apps/desktop/main.ts`, `apps/web/src/recorder/*`, `apps/web/src/pages/RecordPage.tsx`, `docs/DESIGN.md`

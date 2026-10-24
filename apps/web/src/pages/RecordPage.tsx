@@ -9,6 +9,7 @@ import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { Select } from "../components/Select";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/format";
+import { inDesktopApp } from "../lib/desktop";
 import { ChunkUploader, type UploadState } from "../recorder/chunk-uploader";
 import { checkAudioFile, sliceFile, titleFromFileName, UPLOAD_ACCEPT } from "../recorder/file-upload";
 import { useAudioLevel } from "../recorder/use-audio-level";
@@ -171,7 +172,7 @@ export function RecordPage() {
           const { id } = await api<{ id: string }>("/recordings", {
             method: "POST",
             headers: JSON_HEADERS,
-            body: JSON.stringify({ mode, title: title.trim() || undefined, language, vocabulary: vocabulary.trim() || undefined, mimeType: pickMimeType() || "audio/webm", source: "web" }),
+            body: JSON.stringify({ mode, title: title.trim() || undefined, language, vocabulary: vocabulary.trim() || undefined, mimeType: pickMimeType() || "audio/webm", source: inDesktopApp() ? "desktop" : "web" }),
           });
           idRef.current = id;
           uploaderRef.current = new ChunkUploader(id, setUpload);

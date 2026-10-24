@@ -9,6 +9,7 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
+        env: { ELECTRON_SKIP_BINARY_DOWNLOAD: "1" }   # the desktop app's checks don't need the Electron program
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg   # the transcribe job test runs ffmpeg
       - run: cp .env.example .env                     # config.ts needs the variables; no AI keys required
       - run: docker compose up -d --wait postgres redis s3
