@@ -11,6 +11,11 @@ import { searchRepo } from "./modules/search/search.repository.js";
 import { SearchService } from "./modules/search/search.service.js";
 import { embedder } from "./ai/embeddings/index.js";
 import { searchController } from "./modules/search/search.controller.js";
+import { askRepo } from "./modules/ask/ask.repository.js";
+import { AskService } from "./modules/ask/ask.service.js";
+import { askController } from "./modules/ask/ask.controller.js";
+import { answerer as realAnswerer } from "./ai/answers/index.js";
+import type { Answerer } from "./ai/answers/answerer.js";
 import { actionItemsRepo } from "./modules/action-items/action-items.repository.js";
 import { ActionItemsService } from "./modules/action-items/action-items.service.js";
 import { actionItemsController } from "./modules/action-items/action-items.controller.js";
@@ -28,7 +33,7 @@ async function realQueues(app: FastifyInstance): Promise<Queues> {
   return queues;
 }
 
-export async function buildServer(opts: { queues?: Queues } = {}) {
+export async function buildServer(opts: { queues?: Queues; answerer?: Answerer } = {}) {
   const app = Fastify({ logger: true });
   // dev only (production is same-origin behind Caddy); PUT/PATCH/DELETE must be listed, the default is GET,HEAD,POST
   await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true, methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] });
@@ -66,6 +71,7 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
       }));
       await recordingsController(api, recordings);
       await searchController(api, new SearchService(searchRepo, embedder));
+      await askController(api, new AskService(askRepo, embedder, opts.answerer ?? realAnswerer));   // tests pass a fake
       await actionItemsController(api, new ActionItemsService(actionItemsRepo, repo));
       await sharedController(api, recordings);
       await accountController(api, new AccountService(accountRepo, recordings));

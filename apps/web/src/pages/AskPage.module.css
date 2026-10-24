@@ -1,0 +1,169 @@
+/* Ask your recordings (Task 2.3, no mockup): the New recording form's field, then the answer as one white card */
+.page {
+  max-width: 720px;
+}
+.scope {
+  margin-top: var(--space-2);
+  font-size: 15px;
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+.note {
+  margin-top: var(--space-4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-5);
+}
+.label {
+  font-weight: 600;
+}
+.input {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-bg);
+  resize: vertical;
+}
+.hint {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.form > div {
+  margin-top: var(--space-2);
+}
+
+.status {
+  margin-top: var(--space-5);
+  font-weight: 600;
+}
+.error {
+  margin-top: var(--space-5);
+  font-size: 14px;
+  color: var(--color-error);
+}
+
+.card {
+  margin-top: var(--space-6);
+  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+}
+/* the question, small and muted above its answer */
+.question {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 17px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 22px;
+}
+/* a citation: a small number in a pill, raised a little like a footnote; it jumps to its source below */
+.cite,
+.n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-ink);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+.cite {
+  margin-left: 2px;
+  vertical-align: 3px;
+}
+.cite:hover {
+  background: var(--color-card-decision);
+  color: var(--color-ink);
+}
+
+.sourcesTitle {
+  margin-top: var(--space-5);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+.sources {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.source {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+  scroll-margin-top: var(--space-5);
+}
+/* reached from a citation: the source gets the decision yellow for a moment, like the transcript's playing line */
+.source:target {
+  background: var(--color-card-decision);
+  animation: fade 2s ease-out 1s forwards;
+}
+@keyframes fade {
+  to { background: transparent; }
+}
+.n {
+  flex: none;
+  margin-top: 2px;
+}
+.sourceMain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sourceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+}
+.time {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sourceTitle {
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.sourceText {
+  margin-top: 2px;
+  font-size: 15px;
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .source:target {
+    animation: none;
+  }
+}

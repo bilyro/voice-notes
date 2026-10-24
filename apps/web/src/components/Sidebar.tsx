@@ -70,6 +70,7 @@ export function Sidebar() {
           Action items
           {openItems && <span className={styles.count} aria-label={`${openItems.length} open`}>{openItems.length}</span>}
         </NavLink>
+        <NavLink to="/ask" className={styles.navItem}>Ask</NavLink>
       </nav>
 
       {recent.length > 0 && (

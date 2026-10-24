@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LANGUAGE_NAMES, notesToMarkdown, SavedNotes, type Recording, type RecordingMode, type ShareLink, type TranscriptLine } from "@vn/shared";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
-import { Button } from "../components/Button";
+import { Button, ButtonLink } from "../components/Button";
 import { NotesEditor } from "../components/NotesEditor";
 import { SegmentedControl, type Tone } from "../components/SegmentedControl";
 import { Tabs } from "../components/Tabs";
@@ -285,6 +285,11 @@ export function RecordingDetailPage() {
               Share
               {data.shareToken && <span className="visually-hidden"> (link is on)</span>}
             </Button>
+            {/* Task 2.3: questions about this recording only */}
+            <ButtonLink variant="secondary" to={`/ask?recording=${id}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" /><path d="M10 9.5a2 2 0 1 1 2.5 1.9c-.3.1-.5.4-.5.7v.4" /><path d="M12 14.5h.01" /></svg>
+              Ask about this recording
+            </ButtonLink>
           </>
         )}
         </div>
