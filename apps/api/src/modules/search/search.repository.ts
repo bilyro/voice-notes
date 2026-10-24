@@ -53,6 +53,27 @@ export class SearchRepository {
     return rows;
   }
 
+  /**
+   * Task 2.2: your lines closest in meaning to the query vector, with their similarity (1 − cosine distance).
+   * Lines under 3 words ("…", "Okay.") are skipped: they match everything a little and say nothing.
+   * pgvector's iterative scan keeps reading the HNSW index until enough of *your* lines are found.
+   */
+  async meaningMatches(userId: string, queryVector: string, limit: number) {
+    return this.db.transaction(async (trx) => {
+      await trx.raw("set local hnsw.iterative_scan = relaxed_order");
+      const { rows } = await trx.raw<{ rows: { recording_id: string; start_ms: number; text: string; score: number }[] }>(
+        `select s.recording_id, s.start_ms, s.text, 1 - (s.embedding <=> :q::vector) as score
+         from transcript_segments s join recordings r on r.id = s.recording_id
+         where r.user_id = :userId and s.embedding is not null
+           and array_length(regexp_split_to_array(trim(s.text), '\\s+'), 1) >= 3
+         order by s.embedding <=> :q::vector
+         limit :limit`,
+        { q: queryVector, userId, limit },
+      );
+      return rows;
+    });
+  }
+
   /** Your recordings with these ids, newest first. */
   recordings(userId: string, ids: string[]) {
     return this.db<RecordingRow>("recordings").where({ user_id: userId }).whereIn("id", ids).orderBy("created_at", "desc");

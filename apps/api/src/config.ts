@@ -29,6 +29,9 @@ const Env = z.object({
   EMBEDDINGS_PROVIDER: z.enum(["local", "fake"]).default("local"),
   EMBEDDINGS_MODEL: z.string().default("Xenova/multilingual-e5-small"),
   MODEL_CACHE_DIR: z.string().default(".cache/models"),
+  // Task 2.2: the least cosine similarity for a "similar meaning" match; tuned on the test recordings (all nonsense
+  // questions below it, 12 of 15 paraphrased ones above); depends on the model
+  SEMANTIC_MIN_SCORE: z.coerce.number().default(0.84),
   // Task 1.35: refuse passwords found in data breaches (api.pwnedpasswords.com); the API tests switch it off
   PASSWORD_BREACH_CHECK: z.stringbool().default(true),
 });

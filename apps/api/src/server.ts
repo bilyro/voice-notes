@@ -9,6 +9,7 @@ import { RecordingsService, type Queues } from "./modules/recordings/recordings.
 import { recordingsController } from "./modules/recordings/recordings.controller.js";
 import { searchRepo } from "./modules/search/search.repository.js";
 import { SearchService } from "./modules/search/search.service.js";
+import { embedder } from "./ai/embeddings/index.js";
 import { searchController } from "./modules/search/search.controller.js";
 import { actionItemsRepo } from "./modules/action-items/action-items.repository.js";
 import { ActionItemsService } from "./modules/action-items/action-items.service.js";
@@ -64,7 +65,7 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
         freeMode: config.STT_PROVIDER === "groq" || config.NOTES_PROVIDER === "groq",
       }));
       await recordingsController(api, recordings);
-      await searchController(api, new SearchService(searchRepo));
+      await searchController(api, new SearchService(searchRepo, embedder));
       await actionItemsController(api, new ActionItemsService(actionItemsRepo, repo));
       await sharedController(api, recordings);
       await accountController(api, new AccountService(accountRepo, recordings));
@@ -78,4 +79,6 @@ export async function buildServer(opts: { queues?: Queues } = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const app = await buildServer();
   await app.listen({ port: config.PORT, host: "0.0.0.0" });
+  // load the embeddings model now (a few seconds), not on the first search (Task 2.2)
+  void embedder.embedQuery("warm up").catch((e) => app.log.error(e, "embeddings model failed to load"));
 }

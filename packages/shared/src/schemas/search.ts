@@ -9,7 +9,7 @@ export const MARK_START = "⟦";
 export const MARK_END = "⟧";
 
 export const SearchMatch = z.object({
-  kind: z.enum(["title", "notes", "transcript"]),
+  kind: z.enum(["title", "notes", "transcript", "meaning"]),   // "meaning": a line found by what it means, not its words (Task 2.2)
   snippet: z.string(),
   startMs: z.number().int().optional(),        // transcript matches: where it was said
 });

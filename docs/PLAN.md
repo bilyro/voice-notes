@@ -2095,11 +2095,25 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - [x] **Commit:** `feat(api): local embeddings for transcript lines`
 
 #### Task 2.2 — Search by meaning
-- [ ] **Files:** `apps/api/src/modules/search/*`, `packages/shared/src/schemas/search.ts`, `apps/web/src/pages/RecordingsPage.tsx`, `docs/DESIGN.md`
-- [ ] **API:** `GET /api/search` also embeds the query (`query: …`) and takes your closest lines by cosine distance (below a tuned threshold). It merges them with the full-text matches (reciprocal rank fusion), so exact words still come first. A line found only by meaning is a match of kind `"meaning"` (no word marks, its timestamp link as before).
-- [ ] **Web:** meaning matches show a small "Similar meaning" label instead of highlighted words.
-- [ ] **Verify:** a query with no shared words ("reserve the sports hall") finds the line "I will book the gym"; a Ukrainian query finds the matching Ukrainian line; exact-word results are unchanged (the Task 1.28 suite passes); another user's lines never appear; a query unrelated to anything returns nothing; CI green.
-- [ ] **Commit:** `feat: search by meaning`
+- [x] **Files:** `apps/api/src/modules/search/*` (+ `search-meaning.test.ts`), `apps/api/src/config.ts` (`SEMANTIC_MIN_SCORE`), `apps/api/src/server.ts` (embedder, warm-up), `packages/shared/src/schemas/search.ts`, `apps/web/src/pages/RecordingsPage.tsx` (+ CSS module), `docs/DESIGN.md`
+- [x] **API:** `GET /api/search` also embeds the query (`query: …`) and takes your closest lines by cosine distance (below a tuned threshold). It merges them with the full-text matches (reciprocal rank fusion), so exact words still come first. A line found only by meaning is a match of kind `"meaning"` (no word marks, its timestamp link as before).
+- [x] **Web:** meaning matches show a small "Similar meaning" label instead of highlighted words.
+- [x] **Verify:** a query with no shared words ("reserve the sports hall") finds the line "I will book the gym"; a Ukrainian query finds the matching Ukrainian line; exact-word results are unchanged (the Task 1.28 suite passes); another user's lines never appear; a query unrelated to anything returns nothing; CI green.
+- [x] **As built:**
+  - **Model and threshold, measured on the test recordings:** 15 paraphrased questions (including Ukrainian and Spanish) and 7 unrelated ones over all 2,064 lines.
+    - e5-small and e5-base both found the right line in the top 3 for 12 of 12 paraphrases (MRR 0.88 vs 0.96). Base was 4× slower and its scores separate *worse*, so the small model stays.
+    - A relative measure (how far the top line stands out, z-score) didn't separate either.
+    - A plain cut-off of **0.84** rejects all 7 unrelated questions (the best scored 0.834) and keeps 12 of 15 real ones; the 3 misses are two cross-language questions and one loose paraphrase. It's `SEMANTIC_MIN_SCORE`, tied to the model.
+    - Lines under 3 words ("…", "Okay.") matched everything a little, so they're left out.
+  - **Index:** pgvector 0.8's iterative HNSW scan (`hnsw.iterative_scan = relaxed_order`) keeps reading the index until enough of *your* lines are found, instead of filtering a fixed candidate list.
+  - **Ordering:** simpler than the planned reciprocal rank fusion. Recordings with word matches first (newest first, unchanged), then recordings found only by meaning (best first). Within a recording, meaning lines come after word matches and never repeat a line found by its words.
+  - **Robustness:** if the model fails, word search still answers. The API server loads the model right after starting, so the first search isn't slow; a query then takes 25–80 ms.
+  - **Verified:**
+    - API tests with a concept stand-in embedder: a line with no shared words found as `meaning` at its moment; word matches first and not repeated; lines under 3 words skipped; another user's lines never; an unrelated question → nothing.
+    - Live: "pupils wait too long to get their midday meal" → the lunch-queue lines; "the school van failed its safety check" → the minibus line; "quantum chromodynamics…" and "recipe for borscht…" → nothing.
+    - Headless Chrome, 8 checks: labelled meaning matches without highlights; the timestamp opens the recording at that moment; nonsense → "No recordings match"; exact words still highlighted; a Ukrainian paraphrase ("скільки коштує поїздка для кожної дитини") finds the line about 900 hryvnias per child; no page errors.
+    - The Task 1.28 search suite 18/18; CI green.
+- [x] **Commit:** `feat: search by meaning`
 
 #### Task 2.3 — Ask your recordings
 - [ ] **Files:** `apps/api/src/ai/answers/` (new: `answerer.ts` interface, Groq and Claude adapters, fake), `apps/api/src/modules/ask/*` (new), `packages/shared/src/schemas/ask.ts` (new), `apps/web/src/pages/AskPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`

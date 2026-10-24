@@ -126,13 +126,14 @@ export function RecordingsPage() {
                       <ul className={styles.matches}>
                         {matches.filter((m) => m.kind !== "title").map((m, i) => (
                           <li key={i} className={styles.match}>
-                            {m.kind === "transcript" && m.startMs !== undefined ? (
+                            {(m.kind === "transcript" || m.kind === "meaning") && m.startMs !== undefined ? (
                               <Link to={`/recordings/${r.id}?t=${m.startMs}`} className={styles.time} aria-label={`Play from ${formatDuration(m.startMs)}`}>
                                 {formatDuration(m.startMs)}
                               </Link>
                             ) : (
                               <span className={styles.kind}>Notes</span>
                             )}
+                            {m.kind === "meaning" && <span className={styles.similar}>Similar meaning</span>}
                             <Snippet text={m.snippet} lang={r.language} />
                           </li>
                         ))}
