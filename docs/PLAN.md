@@ -2148,10 +2148,24 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 #### Task 3.0 — Test: recording the computer's sound on macOS (1–2 days)
 > The riskiest part of the desktop app, so it comes first as a throwaway test, not product code.
-- [ ] **Try:** a minimal Electron app that uses `session.setDisplayMediaRequestHandler` with `audio: "loopback"` (ScreenCaptureKit on macOS 13+) plus the microphone, mixed with Web Audio, recorded for 1 minute while a Zoom/Meet call or a YouTube video plays. Note the permissions macOS asks for (Screen Recording), the quality, echo, and the macOS and Electron versions needed.
-- [ ] **Fallbacks if it fails:** a virtual audio device (BlackHole) or a small native helper. Write down which way works.
-- [ ] **Verify:** on your Mac, a 1-minute recording has both your voice and the call's sound, transcribed by the normal pipeline; the decision (and its limits) is written here.
-- [ ] **Commit:** `docs(plan): desktop sound capture test result`
+- [x] **Try:** a minimal Electron app that uses `session.setDisplayMediaRequestHandler` with `audio: "loopback"` (ScreenCaptureKit on macOS 13+) plus the microphone, mixed with Web Audio, recorded for 1 minute while a Zoom/Meet call or a YouTube video plays. Note the permissions macOS asks for (Screen Recording), the quality, echo, and the macOS and Electron versions needed.
+- [x] **Fallbacks if it fails:** a virtual audio device (BlackHole) or a small native helper. Write down which way works.
+- [x] **Verify:** on your Mac, a 1-minute recording has both your voice and the call's sound, transcribed by the normal pipeline; the decision (and its limits) is written here.
+- [x] **Result (2026-10-24): the built-in way works. No BlackHole, no native helper.**
+  - **Setup:** macOS 26.6.2 (Apple Silicon MacBook Air), Electron 45.0.0 (Chromium 156).
+  - **How:** `setDisplayMediaRequestHandler` answers with the first screen from `desktopCapturer.getSources({ types: ["screen"] })` and `audio: "loopback"`. The page calls `getDisplayMedia({ video: true, audio: {…} })`, stops the video track at once, and mixes the "System audio" track with the microphone in Web Audio (as `mixAudio` does).
+  - **Permission:** it needs **Screen & System Audio Recording**, even for sound only.
+    - Electron refuses a sound-only reply ("Video was requested, but no video stream was provided"). The Core Audio tap feature (`MacCatapLoopbackAudioForScreenShare`) doesn't change that, and `getSources` fails without the permission.
+    - macOS showed no prompt and didn't list the app: it was added by hand with "+" in System Settings. After that, it worked even though the list still didn't show it.
+    - So Task 3.2 needs a guide that opens that settings page (`x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture`) and checks `systemPreferences.getMediaAccessStatus("screen")`.
+  - **Signing:** the test app is ad-hoc signed, and macOS ties the permission to that exact build. An unsigned app (Task 3.4) will probably need the permission again after each new build; a signed app keeps it.
+  - **Settings:** the loopback track comes with echo cancellation, noise suppression and auto gain on. Ask for them off (as for the mic, Task 1.31); it is then 48 kHz stereo.
+  - **What it records:** everything the Mac plays (every app, notifications too), not one app or tab.
+  - **Verified:**
+    - **AirPods:** a 20 s run. The computer-sound track had the test "call" voice and a video playing on the Mac; the mic had the speech in the room and none of the video. The mix came out ready through the normal pipeline with both.
+    - **MacBook speakers, 1 minute:** the test call voice played twice, and the mix's transcript has both word for word. The mic heard the speakers only faintly (peak 0.03 vs 0.22), and nothing appears twice: no echo problem.
+    - Not tried: a real Zoom/Meet call (a video and synthetic speech stood in), and a longer recording than 1 minute.
+- [x] **Commit:** `docs(plan): desktop sound capture test result`
 
 #### Task 3.1 — Desktop app shell
 - [ ] **Files:** `apps/desktop/` (new: `package.json` with `electron` + `electron-builder`, `main.ts`, `preload.ts`), `pnpm-workspace.yaml`, `turbo.json`, `apps/api/src/config.ts` (allow the desktop origin), README
