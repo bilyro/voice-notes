@@ -12,7 +12,7 @@ export type JobQueue = {
   add(name: string, data: { recordingId: string }, opts: { jobId: string }): Promise<unknown>;
   getJob(jobId: string): Promise<{ remove(): Promise<unknown> } | undefined | null>;
 };
-export type Queues = { transcribe: JobQueue; notes: JobQueue };
+export type Queues = { transcribe: JobQueue; notes: JobQueue; embed?: JobQueue };   // embed: Task 2.1 (tests may leave it out)
 
 export class RecordingsService {
   constructor(private repo: RecordingsRepository, private queues: Queues) {}
@@ -95,6 +95,7 @@ export class RecordingsService {
   async editSegment(userId: string, id: string, segmentId: string, text: string) {
     await this.repo.getOwned(userId, id);
     if (!(await this.repo.editSegment(id, segmentId, text))) throw httpError(404, "Line not found");
+    await this.queues.embed?.add("embed", { recordingId: id }, { jobId: `embed-${id}-${Date.now()}` });   // its meaning changed (Task 2.1)
   }
 
   /** Task 1.38: new AI notes from the transcript as it is now, optionally as another mode. The old versions stay. */

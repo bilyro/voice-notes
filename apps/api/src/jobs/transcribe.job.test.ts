@@ -27,7 +27,7 @@ afterAll(async () => {
     await storage.deletePrefix(keys.prefix(id));
     await repo.delete(id);
   }
-  await Promise.all([queues.transcribe.close(), queues.notes.close()]);
+  await Promise.all([queues.transcribe.close(), queues.notes.close(), queues.embed.close()]);
   await connection.quit();
   await db.destroy();
 });
@@ -52,5 +52,9 @@ describe("transcribeJob", () => {
 
     const job = await queues.notes.getJob(`notes-${rec.id}`);
     expect(job?.data).toEqual({ recordingId: rec.id });
+    // Task 2.1: the embed job is queued too
+    const embeds = (await queues.embed.getJobs(["waiting", "delayed", "active", "completed"])).filter((j) => j.data.recordingId === rec.id);
+    expect(embeds.length).toBeGreaterThanOrEqual(1);
+    for (const j of embeds) await j.remove();
   });
 });

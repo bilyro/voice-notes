@@ -15,5 +15,7 @@ export const queues = {
     prefix,
     defaultJobOptions: { ...defaults, attempts: 5, backoff: { type: "fixed", delay: 60_000 } },
   }),
+  // Task 2.1: meaning vectors for transcript lines (a local model, so no rate limits)
+  embed: new Queue<{ recordingId: string }>("embed", { connection, prefix, defaultJobOptions: defaults }),
 };
 export type Queues = typeof queues;

@@ -21,7 +21,7 @@ import { accountController } from "./modules/account/account.controller.js";
 async function realQueues(app: FastifyInstance): Promise<Queues> {
   const { queues, connection } = await import("./queue/queues.js");
   app.addHook("onClose", async () => {
-    await Promise.all([queues.transcribe.close(), queues.notes.close()]);
+    await Promise.all([queues.transcribe.close(), queues.notes.close(), queues.embed.close()]);
     await connection.quit();
   });
   return queues;

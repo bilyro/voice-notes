@@ -25,6 +25,10 @@ const Env = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   NOTES_MODEL: z.string().default("claude-haiku-4-5"),
   MONTHLY_MINUTES_LIMIT: z.coerce.number().default(600),
+  // Task 2.1: embeddings for search by meaning; "fake" in tests and CI (no model download)
+  EMBEDDINGS_PROVIDER: z.enum(["local", "fake"]).default("local"),
+  EMBEDDINGS_MODEL: z.string().default("Xenova/multilingual-e5-small"),
+  MODEL_CACHE_DIR: z.string().default(".cache/models"),
   // Task 1.35: refuse passwords found in data breaches (api.pwnedpasswords.com); the API tests switch it off
   PASSWORD_BREACH_CHECK: z.stringbool().default(true),
 });

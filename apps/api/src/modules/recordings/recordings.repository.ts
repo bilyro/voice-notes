@@ -91,7 +91,8 @@ export class RecordingsRepository {
 
   /** Task 1.38: a person's fix to one line. Returns false when the line isn't in this recording. */
   async editSegment(recordingId: string, segmentId: string, text: string) {
-    const n = await this.db<SegmentRow>("transcript_segments").where({ id: segmentId, recording_id: recordingId }).update({ text });
+    // the old embedding no longer matches the text: cleared, the embed job fills it again (Task 2.1)
+    const n = await this.db("transcript_segments").where({ id: segmentId, recording_id: recordingId }).update({ text, embedding: null });
     return n > 0;
   }
 

@@ -23,4 +23,7 @@ export async function transcribeJob(recordingId: string) {
   }
 
   await queues.notes.add("notes", { recordingId }, { jobId: `notes-${recordingId}` });
+  // Task 2.1: meaning vectors, in parallel with the notes. The job only fills empty lines, so a fresh id each time is
+  // safe (a reused id would be ignored by BullMQ while the finished job is kept)
+  await queues.embed.add("embed", { recordingId }, { jobId: `embed-${recordingId}-${Date.now()}` });
 }

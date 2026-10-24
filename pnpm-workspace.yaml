@@ -8,3 +8,7 @@ allowBuilds:
   esbuild: false
   # msgpackr-extract (via bullmq) is an optional native speed-up; msgpackr falls back to plain JS.
   msgpackr-extract: false
+  # via @huggingface/transformers (Task 2.1): the script only downloads GPU (CUDA) add-ons; the CPU runtime is bundled
+  onnxruntime-node: false
+  # its postinstall only checks the installed version
+  protobufjs: false

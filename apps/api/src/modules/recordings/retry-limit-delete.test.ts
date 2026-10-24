@@ -26,7 +26,7 @@ afterAll(async () => {
     await storage.deletePrefix(keys.prefix(id));
   }
   await db("recordings").whereIn("id", ids).delete();
-  await Promise.all([queues.transcribe.close(), queues.notes.close()]);
+  await Promise.all([queues.transcribe.close(), queues.notes.close(), queues.embed.close()]);
   await connection.quit();
   await db.destroy();
 });

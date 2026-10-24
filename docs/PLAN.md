@@ -2075,13 +2075,24 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 
 #### Task 2.1 — Embeddings for every transcript line (local, free)
 > An embedding is a list of numbers that captures what a sentence means, so "book the gym" and "reserve the sports hall" end up close together, even across English, Ukrainian and Spanish.
-- [ ] **Files:** `apps/api/package.json` (+ `@huggingface/transformers`), `apps/api/src/ai/embeddings/` (new: `embedder.ts` interface, `local-e5.ts`, `fake-embedder.ts`), `apps/api/src/ai/providers.ts`, `apps/api/src/config.ts`, `apps/api/migrations/006_embeddings.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/jobs/embed.job.ts` (new) + `transcribe.job.ts`, `apps/api/src/worker.ts`, `apps/api/src/modules/recordings/*` (a line edit re-embeds), `apps/api/scripts/embed-backfill.ts` (new), `docker-compose.prod.yml` (model cache volume), `.env.example`
-- [ ] **Model:** `Xenova/multilingual-e5-small` (ONNX, about 120 MB, downloaded once into `MODEL_CACHE_DIR`), 384 numbers per line, 100+ languages. e5 needs the prefixes `passage: ` for lines and `query: ` for questions. `EMBEDDINGS_PROVIDER=local|fake` (tests and CI use the fake: no download).
-- [ ] **Migration:** `transcript_segments.embedding` from `vector(1536)` (planned for OpenAI, never filled) to `vector(384)`, plus an HNSW index with cosine distance.
-- [ ] **Pipeline:** after the transcript is saved, the transcribe job queues `embed:<id>`. The embed job fills every line of the recording in batches of 32 (idempotent: it only fills empty ones). A transcript line edit (Task 1.38) clears that line's embedding and queues the job again. Notes don't wait for it.
-- [ ] **Backfill:** `pnpm --filter @vn/api tsx scripts/embed-backfill.ts` queues every recording that has lines without embeddings.
-- [ ] **Verify:** unit tests with the fake embedder (the job fills all lines, runs twice without changes, an edited line is re-embedded); with the real model: "book the gym" is closer to "reserve the sports hall" than to "order pizza", and the Ukrainian and Spanish versions of a sentence are close to the English one; a new recording gets embeddings for every line; the backfill fills the existing ones; CI green.
-- [ ] **Commit:** `feat(api): local embeddings for transcript lines`
+- [x] **Files:** `apps/api/package.json` (+ `@huggingface/transformers`), `apps/api/src/ai/embeddings/` (new: `embedder.ts` interface, `local-e5.ts`, `fake-embedder.ts`), `apps/api/src/ai/providers.ts`, `apps/api/src/config.ts`, `apps/api/migrations/006_embeddings.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/jobs/embed.job.ts` (new) + `transcribe.job.ts`, `apps/api/src/worker.ts`, `apps/api/src/modules/recordings/*` (a line edit re-embeds), `apps/api/scripts/embed-backfill.ts` (new), `docker-compose.prod.yml` (model cache volume), `.env.example`, `.gitignore`, `pnpm-workspace.yaml` (two install scripts left off)
+- [x] **Model:** `Xenova/multilingual-e5-small` (ONNX, about 120 MB, downloaded once into `MODEL_CACHE_DIR`), 384 numbers per line, 100+ languages. e5 needs the prefixes `passage: ` for lines and `query: ` for questions. `EMBEDDINGS_PROVIDER=local|fake` (tests and CI use the fake: no download).
+- [x] **Migration:** `transcript_segments.embedding` from `vector(1536)` (planned for OpenAI, never filled) to `vector(384)`, plus an HNSW index with cosine distance.
+- [x] **Pipeline:** after the transcript is saved, the transcribe job queues `embed:<id>`. The embed job fills every line of the recording in batches of 32 (idempotent: it only fills empty ones). A transcript line edit (Task 1.38) clears that line's embedding and queues the job again. Notes don't wait for it.
+- [x] **Backfill:** `pnpm --filter @vn/api tsx scripts/embed-backfill.ts` queues every recording that has lines without embeddings.
+- [x] **Verify:** unit tests with the fake embedder (the job fills all lines, runs twice without changes, an edited line is re-embedded); with the real model: "book the gym" is closer to "reserve the sports hall" than to "order pizza", and the Ukrainian and Spanish versions of a sentence are close to the English one; a new recording gets embeddings for every line; the backfill fills the existing ones; CI green.
+- [x] **As built:**
+  - **Install scripts:** pnpm blocked two of them; both stay off in `pnpm-workspace.yaml`. onnxruntime-node's only downloads GPU (CUDA) add-ons, and the CPU runtime is bundled. protobufjs's is only a version check.
+  - **Where the embedder lives:** `ai/embeddings/index.ts`, not `providers.ts`, which checks API keys and is loaded only by the worker. Search (Task 2.2) needs the embedder in the API server too.
+  - **Loading:** the model loads lazily: 4.5 s the first time, then about 5 ms per line.
+  - **Job ids:** embed jobs get a fresh id each time (`embed-<id>-<time>`). The job only fills empty lines, so duplicates are harmless; a reused id would be ignored while BullMQ keeps the finished job.
+  - **Line edits:** an edit sets the line's embedding to `NULL` and queues the job.
+  - **Verified:**
+    - Tests with the fake embedder: all lines filled with 384 numbers and a second run does nothing; an edited line is cleared, queued and refilled; the nearest line by `<=>` is the right one; no lines → nothing; the transcribe job queues the embed job.
+    - Real model: passages "book the gym" ~ "reserve the sports hall" 0.81 vs "order pizza" 0.77; the Spanish and Ukrainian versions 0.89 and 0.80. Questions rank the right lines first ("who orders food" → pizza, "бронювання залу" → the Ukrainian gym line).
+    - A new recording through the worker got vectors for all 5 lines; the backfill filled 2,059 lines in 107 recordings in 20 s; migration rollback and re-apply; the prod compose file validates; CI green.
+  - **Risk for Task 2.2:** for an English question against English lines, e5-small separates weakly ("reserve the sports hall" → the gym line 0.719 vs the pizza line 0.717). 2.2 must tune a threshold carefully, or switch to `multilingual-e5-base` (~280 MB, better separation).
+- [x] **Commit:** `feat(api): local embeddings for transcript lines`
 
 #### Task 2.2 — Search by meaning
 - [ ] **Files:** `apps/api/src/modules/search/*`, `packages/shared/src/schemas/search.ts`, `apps/web/src/pages/RecordingsPage.tsx`, `docs/DESIGN.md`

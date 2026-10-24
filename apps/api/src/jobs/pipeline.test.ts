@@ -58,7 +58,7 @@ afterAll(async () => {
   await db("account").whereIn("userId", users).delete();
   await db("user").whereIn("id", users).delete();
   await app.close();
-  await Promise.all([queues.transcribe.close(), queues.notes.close()]);
+  await Promise.all([queues.transcribe.close(), queues.notes.close(), queues.embed.close()]);
   await connection.quit();
   await db.destroy();
 });

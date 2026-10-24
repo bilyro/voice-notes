@@ -31,6 +31,8 @@ services:
     env_file: .env
     depends_on: [postgres, redis]
     restart: unless-stopped
+    # the embeddings model (Task 2.1, ~120 MB) is downloaded once and kept here (MODEL_CACHE_DIR defaults to .cache/models)
+    volumes: ["models:/app/.cache/models"]
 
   caddy:
     image: caddy:2
@@ -43,5 +45,5 @@ services:
       - caddydata:/data
     restart: unless-stopped
 
-volumes: { pgdata: {}, redisdata: {}, caddydata: {} }
+volumes: { pgdata: {}, redisdata: {}, caddydata: {}, models: {} }
 # audio files live in Cloudflare R2, not on this server
