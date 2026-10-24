@@ -2071,11 +2071,69 @@ docker compose -f docker-compose.prod.yml exec api pnpm --filter @vn/api auth:mi
 - "Ask your recordings" chat: retrieve top segments → answer with links to `[recording, timestamp]`.
 - "Assign" for action items without an owner, on the Action items page from Task 1.29.
 
-### Phase 3 — Desktop app, Electron (≈2 weeks) — next after Task 1.38
+> **Decided on 2026-10-24:** "Ask your recordings" first (Tasks 2.1–2.3), with a **free local embeddings model** (no OpenAI account; nothing leaves the server), then the desktop app (Phase 3, Tasks 3.0–3.4). Going online (Task 1.16) waits. New dependencies approved: `@huggingface/transformers` (2.1); `electron` and `electron-builder` (3.1).
+
+#### Task 2.1 — Embeddings for every transcript line (local, free)
+> An embedding is a list of numbers that captures what a sentence means, so "book the gym" and "reserve the sports hall" end up close together, even across English, Ukrainian and Spanish.
+- [ ] **Files:** `apps/api/package.json` (+ `@huggingface/transformers`), `apps/api/src/ai/embeddings/` (new: `embedder.ts` interface, `local-e5.ts`, `fake-embedder.ts`), `apps/api/src/ai/providers.ts`, `apps/api/src/config.ts`, `apps/api/migrations/006_embeddings.ts`, `apps/api/src/queue/queues.ts`, `apps/api/src/jobs/embed.job.ts` (new) + `transcribe.job.ts`, `apps/api/src/worker.ts`, `apps/api/src/modules/recordings/*` (a line edit re-embeds), `apps/api/scripts/embed-backfill.ts` (new), `docker-compose.prod.yml` (model cache volume), `.env.example`
+- [ ] **Model:** `Xenova/multilingual-e5-small` (ONNX, about 120 MB, downloaded once into `MODEL_CACHE_DIR`), 384 numbers per line, 100+ languages. e5 needs the prefixes `passage: ` for lines and `query: ` for questions. `EMBEDDINGS_PROVIDER=local|fake` (tests and CI use the fake: no download).
+- [ ] **Migration:** `transcript_segments.embedding` from `vector(1536)` (planned for OpenAI, never filled) to `vector(384)`, plus an HNSW index with cosine distance.
+- [ ] **Pipeline:** after the transcript is saved, the transcribe job queues `embed:<id>`. The embed job fills every line of the recording in batches of 32 (idempotent: it only fills empty ones). A transcript line edit (Task 1.38) clears that line's embedding and queues the job again. Notes don't wait for it.
+- [ ] **Backfill:** `pnpm --filter @vn/api tsx scripts/embed-backfill.ts` queues every recording that has lines without embeddings.
+- [ ] **Verify:** unit tests with the fake embedder (the job fills all lines, runs twice without changes, an edited line is re-embedded); with the real model: "book the gym" is closer to "reserve the sports hall" than to "order pizza", and the Ukrainian and Spanish versions of a sentence are close to the English one; a new recording gets embeddings for every line; the backfill fills the existing ones; CI green.
+- [ ] **Commit:** `feat(api): local embeddings for transcript lines`
+
+#### Task 2.2 — Search by meaning
+- [ ] **Files:** `apps/api/src/modules/search/*`, `packages/shared/src/schemas/search.ts`, `apps/web/src/pages/RecordingsPage.tsx`, `docs/DESIGN.md`
+- [ ] **API:** `GET /api/search` also embeds the query (`query: …`) and takes your closest lines by cosine distance (below a tuned threshold). It merges them with the full-text matches (reciprocal rank fusion), so exact words still come first. A line found only by meaning is a match of kind `"meaning"` (no word marks, its timestamp link as before).
+- [ ] **Web:** meaning matches show a small "Similar meaning" label instead of highlighted words.
+- [ ] **Verify:** a query with no shared words ("reserve the sports hall") finds the line "I will book the gym"; a Ukrainian query finds the matching Ukrainian line; exact-word results are unchanged (the Task 1.28 suite passes); another user's lines never appear; a query unrelated to anything returns nothing; CI green.
+- [ ] **Commit:** `feat: search by meaning`
+
+#### Task 2.3 — Ask your recordings
+- [ ] **Files:** `apps/api/src/ai/answers/` (new: `answerer.ts` interface, Groq and Claude adapters, fake), `apps/api/src/modules/ask/*` (new), `packages/shared/src/schemas/ask.ts` (new), `apps/web/src/pages/AskPage.tsx` (+ CSS module, new), `apps/web/src/router.tsx`, `apps/web/src/components/Sidebar.tsx`, `apps/web/src/pages/RecordingDetailPage.tsx`, `docs/DESIGN.md`
+- [ ] **API:** `POST /api/ask { question, recordingId? }` (up to 500 characters, only your own recordings). It retrieves the best ~12 lines (meaning + words, as in 2.2), each with the line before and after for context. The answer model (the same provider choice as the notes: Groq free, Claude paid) is told to answer **only** from these excerpts, in the language of the question, citing them as [1], [2]…, and to say so when they don't contain the answer. Response: `{ answer, sources: [{ n, recordingId, title, startMs, text }] }`.
+- [ ] **Page `/ask`** ("Ask" in the sidebar): a question box, the answer, and numbered sources that link to the moment (`/recordings/:id?t=`). The free-plan privacy note as on the Record page. On a recording's page, "Ask about this recording" opens `/ask?recording=<id>`, limited to it.
+- [ ] **Verify:** questions about the test recordings get the right answer with sources at the right moments; a question they don't answer says "I couldn't find that in your recordings"; a Ukrainian question gets a Ukrainian answer; another user's recordings are never used; the recording-only mode stays inside that recording; API tests with a fake answerer; phone width; CI green.
+- [ ] **Commit:** `feat: ask your recordings`
+
+### Phase 3 — Desktop app, Electron (≈2 weeks) — after Task 2.3
 - Electron shell loading the web UI; same API and auth.
 - Tray icon, global hotkey to start/stop, "always on top" mini recorder.
 - **System audio capture** for Zoom/Meet/Teams calls, mixed with the mic via Web Audio API. Do a 1–2 day spike first on your OS — Windows and macOS work differently, and this is the riskiest part of the whole project.
 - Auto-update and code signing (needed later for distribution).
+
+#### Task 3.0 — Test: recording the computer's sound on macOS (1–2 days)
+> The riskiest part of the desktop app, so it comes first as a throwaway test, not product code.
+- [ ] **Try:** a minimal Electron app that uses `session.setDisplayMediaRequestHandler` with `audio: "loopback"` (ScreenCaptureKit on macOS 13+) plus the microphone, mixed with Web Audio, recorded for 1 minute while a Zoom/Meet call or a YouTube video plays. Note the permissions macOS asks for (Screen Recording), the quality, echo, and the macOS and Electron versions needed.
+- [ ] **Fallbacks if it fails:** a virtual audio device (BlackHole) or a small native helper. Write down which way works.
+- [ ] **Verify:** on your Mac, a 1-minute recording has both your voice and the call's sound, transcribed by the normal pipeline; the decision (and its limits) is written here.
+- [ ] **Commit:** `docs(plan): desktop sound capture test result`
+
+#### Task 3.1 — Desktop app shell
+- [ ] **Files:** `apps/desktop/` (new: `package.json` with `electron` + `electron-builder`, `main.ts`, `preload.ts`), `pnpm-workspace.yaml`, `turbo.json`, `apps/api/src/config.ts` (allow the desktop origin), README
+- [ ] **App:** a window that loads the web app (dev: `http://localhost:5173`; later the server address from settings), the same sign-in (cookies kept by Electron), links to other sites open in the normal browser, window size and position remembered, a standard macOS menu. The preload exposes `window.voiceNotesDesktop = { version }`, so the web app knows it runs inside the app; recordings made there get `source: "desktop"`.
+- [ ] **Verify:** `pnpm --filter desktop dev` opens the app; sign in, record and play back work as in the browser; external links open in Safari or Chrome; the window comes back where it was; CI green.
+- [ ] **Commit:** `feat(desktop): Electron app shell`
+
+#### Task 3.2 — Record the computer's sound in the app
+- [ ] **Files:** `apps/desktop/main.ts`, `apps/web/src/recorder/*`, `apps/web/src/pages/RecordPage.tsx`, `docs/DESIGN.md`
+- [ ] **Sound choice in the app:** "Microphone + computer sound" (the way found in 3.0), mixed with the existing `mixAudio`; the browser tab option stays for the web. The first time, a short guide for the macOS Screen Recording permission.
+- [ ] **Verify:** in the app on your Mac, a Zoom/Meet call or a video plus your voice both end up in the transcript; refusing the permission gives a clear message and falls back to the microphone; CI green.
+- [ ] **Commit:** `feat(desktop): record the computer's sound`
+
+#### Task 3.3 — Tray, hotkey and mini recorder
+- [ ] **Files:** `apps/desktop/*`, `apps/web/src/pages/MiniRecorderPage.tsx` (new), `apps/web/src/router.tsx`
+- [ ] **Tray icon** (idle / recording), **global hotkey** (⌥⌘R) to start and stop, and a small always-on-top **mini recorder** window (timer, level, pause, stop) while recording; closing the main window keeps recording.
+- [ ] **Verify:** start from the hotkey with the app in the background, see the mini window, stop from the tray, and the recording is saved and processed; CI green.
+- [ ] **Commit:** `feat(desktop): tray, hotkey and mini recorder`
+
+#### Task 3.4 — A .dmg for your Mac
+- [ ] **Files:** `apps/desktop/electron-builder.yml`, README
+- [ ] **Build:** an unsigned `.dmg` (Apple Silicon) with the app icon from Task 1.18's design. Signing, notarization and auto-update come later: they need an Apple Developer account ($99/year) and the server online.
+- [ ] **Verify:** the .dmg installs on your Mac (right-click → Open the first time), the app signs in to your local API and records; CI green.
+- [ ] **Commit:** `build(desktop): unsigned dmg for macOS`
+
 
 ### Phase 4 — Mobile app, Expo (≈2–3 weeks)
 - Record with `expo-audio`, saving to a local file first.
